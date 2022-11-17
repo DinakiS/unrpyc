@@ -2,19 +2,11 @@
 
 # This module provides tools for safely analyizing pickle files programmatically
 
-import sys
-
-PY3 = sys.version_info >= (3, 0)
-PY2 = not PY3
-
-import types
 import pickle
 import struct
-
-if PY3:
-    from io import BytesIO as StringIO
-else:
-    from io import StringIO
+import sys
+import types
+from io import BytesIO
 
 __all__ = [
     "load", "loads", "safe_load", "safe_loads", "safe_dump", "safe_dumps",
@@ -419,7 +411,8 @@ class FakeUnpicklingError(pickle.UnpicklingError):
     """
     pass
 
-class FakeUnpickler(pickle.Unpickler if PY2 else pickle._Unpickler):
+
+class FakeUnpickler(pickle._Unpickler):
     """
     A forgiving unpickler. On uncountering references to class definitions
     in the pickle stream which it cannot locate, it will create fake classes
@@ -441,14 +434,10 @@ class FakeUnpickler(pickle.Unpickler if PY2 else pickle._Unpickler):
     It inherits from :class:`pickle.Unpickler`. (In Python 3 this is actually
     ``pickle._Unpickler``)
     """
-    if PY2:
-        def __init__(self, file, class_factory=None, encoding="bytes", errors="strict"):
-            pickle.Unpickler.__init__(self, file,)
-            self.class_factory = class_factory or FakeClassFactory()
-    else:
-        def __init__(self, file, class_factory=None, encoding="bytes", errors="strict"):
-            super().__init__(file, fix_imports=False, encoding=encoding, errors=errors)
-            self.class_factory = class_factory or FakeClassFactory()
+
+    def __init__(self, file, class_factory=None, encoding="bytes", errors="strict"):
+        super().__init__(file, fix_imports=False, encoding=encoding, errors=errors)
+        self.class_factory = class_factory or FakeClassFactory()
 
     def find_class(self, module, name):
         mod = sys.modules.get(module, None)
@@ -527,7 +516,8 @@ class SafeUnpickler(FakeUnpickler):
         else:
             return self.class_factory("extension_code_{0}".format(code), "copyreg")
 
-class SafePickler(pickle.Pickler if PY2 else pickle._Pickler):
+
+class SafePickler(pickle._Pickler):
     """
     A pickler which can repickle object hierarchies containing objects created by SafeUnpickler.
     Due to reasons unknown, pythons pickle implementation will normally check if a given class
@@ -573,7 +563,7 @@ def loads(string, class_factory=None, encoding="bytes", errors="errors"):
     Simjilar to :func:`load`, but takes an 8-bit string (bytes in Python 3, str in Python 2)
     as its first argument instead of a binary :term:`file object`.
     """
-    return FakeUnpickler(StringIO(string), class_factory,
+    return FakeUnpickler(BytesIO(string), class_factory,
                          encoding=encoding, errors=errors).load()
 
 
@@ -616,7 +606,7 @@ def safe_loads(string, class_factory=None, safe_modules=(), use_copyreg=False,
     Similar to :func:`safe_load`, but takes an 8-bit string (bytes in Python 3, str in Python 2)
     as its first argument instead of a binary :term:`file object`.
     """
-    return SafeUnpickler(StringIO(string), class_factory, safe_modules, use_copyreg,
+    return SafeUnpickler(BytesIO(string), class_factory, safe_modules, use_copyreg,
                          encoding=encoding, errors=errors).load()
 
 
@@ -631,7 +621,7 @@ def safe_dumps(obj, protocol=pickle.HIGHEST_PROTOCOL):
     """
     A convenience function wrapping SafePickler. It functions similarly to pickle.dumps
     """
-    file = StringIO()
+    file = BytesIO()
     SafePickler(file, protocol).dump(obj)
     return file.getvalue()
 

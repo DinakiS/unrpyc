@@ -19,12 +19,8 @@
 # SOFTWARE.
 
 
-from .util import DecompilerBase, First, WordConcatenator, reconstruct_paraminfo, \
-    reconstruct_arginfo, string_escape, split_logical_lines, Dispatcher
-from .util import say_get_code
-
-from operator import itemgetter
 from io import StringIO
+from operator import itemgetter
 
 from .util import (
     DecompilerBase, Dispatcher, First, WordConcatenator, reconstruct_arginfo, reconstruct_paraminfo, say_get_code, split_logical_lines, string_escape)

@@ -35,8 +35,8 @@
     :license: BSD.
 """
 
-import sys
-PY3 = sys.version_info >= (3, 0)
+# import sys
+# PY3 = sys.version_info >= (3, 0)
 # These might not exist, so we put them equal to NoneType
 Try = TryExcept = TryFinally = YieldFrom = MatMult = Await = type(None)
 
@@ -845,23 +845,23 @@ class SourceGenerator(NodeVisitor):
 
     def visit_Num(self, node):
         self.maybe_break(node)
-
-        negative = (node.n.imag or node.n.real) < 0 and not PY3
-        if negative:
-            self.prec_start(self.UNARYOP_SYMBOLS[USub][1])
+        # PY2 code uneeded, must be tested some time
+        # negative = (node.n.imag or node.n.real) < 0 and not PY3
+        # if negative:
+        #     self.prec_start(self.UNARYOP_SYMBOLS[ast.USub][1])
 
         # 1e999 and related friends are parsed into inf
         if abs(node.n) == 1e999:
-            if negative:
-                self.write('-')
+            # if negative:
+            #     self.write('-')
             self.write('1e999')
             if node.n.imag:
                 self.write('j')
         else:
             self.write(repr(node.n))
 
-        if negative:
-            self.prec_end()
+        # if negative:
+        #     self.prec_end()
 
     def visit_Tuple(self, node, guard=True):
         if guard or not node.elts:
@@ -942,15 +942,17 @@ class SourceGenerator(NodeVisitor):
         symbol, precedence = self.UNARYOP_SYMBOLS[type(node.op)]
         self.prec_start(precedence)
         self.write(symbol)
+        # PY2 code uneeded, must be tested some time
         # workaround: in python 2, an explicit USub node around a number literal
         # indicates the literal was surrounded by parenthesis
-        if (not PY3 and isinstance(node.op, USub) and isinstance(node.operand, Num) 
-                and (node.operand.n.real or node.operand.n.imag) >= 0):
-            self.paren_start()
-            self.visit(node.operand)
-            self.paren_end()
-        else:
-            self.visit(node.operand)
+        # if (not PY3 and isinstance(node.op, ast.USub)
+        #     and isinstance(node.operand, ast.Num)
+        #         and (node.operand.n.real or node.operand.n.imag) >= 0):
+        #     self.paren_start()
+        #     self.visit(node.operand)
+        #     self.paren_end()
+        # else:
+        self.visit(node.operand)
         self.prec_end()
 
     def visit_Subscript(self, node):
@@ -1084,7 +1086,6 @@ class SourceGenerator(NodeVisitor):
         self.write('`')
 
     # Helper Nodes
-
     def visit_alias(self, node):
         # alias does not have line number information
         self.write(node.name)
