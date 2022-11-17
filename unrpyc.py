@@ -63,7 +63,8 @@ __version__ = _unrpyc_ver.__version__
 # special definitions for special classes
 class PyExpr(magic.FakeStrict, str):
     __module__ = "renpy.ast"
-    def __new__(cls, s, filename, linenumber, py=None):
+
+    def __new__(cls, s, filename, linenumber, py=3):
         self = str.__new__(cls, s)
         self.filename = filename
         self.linenumber = linenumber
@@ -71,7 +72,8 @@ class PyExpr(magic.FakeStrict, str):
         return self
 
     def __getnewargs__(self):
-        return str(self), self.filename, self.linenumber
+        return str(self), self.filename, self.linenumber, self.py
+
 
 class PyCode(magic.FakeStrict):
     __module__ = "renpy.ast"
@@ -79,7 +81,7 @@ class PyCode(magic.FakeStrict):
     def __setstate__(self, state):
         if len(state) == 4:
             (_, self.source, self.location, self.mode) = state
-            self.py = None
+            self.py = 2
         else:
             (_, self.source, self.location, self.mode, self.py) = state
 
