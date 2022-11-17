@@ -384,7 +384,11 @@ def main(args):
         # only one thread running, which is inefficient. Avoid this by starting
         # big files first.
         files.sort(key=itemgetter(2), reverse=True)
-        results = Pool(int(args.processes), sharelock, [printlock]).map(worker, files, 1)
+
+        # v1.2.0 improvement
+        # results = Pool(int(args.processes), sharelock, [printlock]).map(worker, files, 1)
+        with Pool(int(args.processes), sharelock, [printlock]) as pool:
+            results = pool.map(worker, files, 1)
     else:
         # Decompile in the order Ren'Py loads in
         files.sort(key=itemgetter(1))
