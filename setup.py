@@ -1,4 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/python3
+
 from setuptools import setup
 
 
