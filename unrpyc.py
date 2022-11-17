@@ -21,16 +21,16 @@
 # SOFTWARE.
 
 import argparse
-from os import path, walk
 import glob
 import itertools
-import traceback
 import struct
-from operator import itemgetter
+import traceback
 import zlib
+from operator import itemgetter
+from os import path, walk
 
 try:
-    from multiprocessing import Pool, Lock, cpu_count
+    from multiprocessing import Lock, Pool, cpu_count
 except ImportError:
     # Mock required support when multiprocessing is unavailable
     def cpu_count():
@@ -51,7 +51,7 @@ except ImportError:
 
 
 import decompiler
-from decompiler import magic, astdump, translate
+from decompiler import astdump, magic, translate
 
 # special definitions for special classes
 
@@ -69,27 +69,35 @@ class PyExpr(magic.FakeStrict, str):
 
 class PyCode(magic.FakeStrict):
     __module__ = "renpy.ast"
+
     def __setstate__(self, state):
         if len(state) == 4:
             (_, self.source, self.location, self.mode) = state
             self.py = None
         else:
             (_, self.source, self.location, self.mode, self.py) = state
+
         self.bytecode = None
+
 
 # renpy 7.5/8 compat; change renpy.python to renpy.revertable 3times
 class RevertableList(magic.FakeStrict, list):
     __module__ = "renpy.revertable"
+
     def __new__(cls):
         return list.__new__(cls)
 
+
 class RevertableDict(magic.FakeStrict, dict):
     __module__ = "renpy.revertable"
+
     def __new__(cls):
         return dict.__new__(cls)
 
+
 class RevertableSet(magic.FakeStrict, set):
     __module__ = "renpy.revertable"
+
     def __new__(cls):
         return set.__new__(cls)
 
@@ -99,8 +107,10 @@ class RevertableSet(magic.FakeStrict, set):
         else:
             self.update(state)
 
-class Sentinel(magic.FakeStrict, object):
+
+class Sentinel(magic.FakeStrict):
     __module__ = "renpy.object"
+
     def __new__(cls, name):
         obj = object.__new__(cls)
         obj.name = name
@@ -112,6 +122,7 @@ class Sentinel(magic.FakeStrict, object):
 # - Let's create two instances of class_factory instead of redefining them on every error # due to revertable objects. renpy @7.5(also v8) is normaly used and @7.4 is fallback
 cls_factory_75 = magic.FakeClassFactory(
     (set, PyExpr, PyCode, RevertableList, RevertableDict, RevertableSet, Sentinel), magic.FakeStrict)
+
 RevertableList.__module__, RevertableDict.__module__, RevertableSet.__module__ = (
     "renpy.python", ) * 3
 cls_factory_74 = magic.FakeClassFactory(
@@ -120,7 +131,8 @@ cls_factory_74 = magic.FakeClassFactory(
 printlock = Lock()
 
 # needs class_factory
-import deobfuscate  # nopep8 # noqa 
+import deobfuscate  # nopep8 # noqa
+
 
 # API
 def revertable_switch(raw_dat):
@@ -178,7 +190,7 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
 
         if not overwrite and path.exists(out_filename):
             print("Output file already exists. Pass --clobber to overwrite.")
-            return False # Don't stop decompiling if one file already exists
+            return False  # Don't stop decompiling if one file already exists
 
     with open(input_filename, 'rb') as in_file:
         if try_harder:
@@ -189,13 +201,14 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
     # py3compat: test if codecs is needet; but shouldn't
     with open(out_filename, 'w', encoding='utf-8') as out_file:
         if dump:
-            astdump.pprint(out_file, ast, decompile_python=decompile_python, comparable=comparable,
-                                          no_pyexpr=no_pyexpr)
+            astdump.pprint(out_file, ast, decompile_python=decompile_python,
+                           comparable=comparable, no_pyexpr=no_pyexpr)
         else:
-            decompiler.pprint(out_file, ast, decompile_python=decompile_python, printlock=printlock,
-                                             translator=translator, tag_outside_block=tag_outside_block,
-                                             init_offset=init_offset)
+            decompiler.pprint(out_file, ast, decompile_python=decompile_python,
+                              printlock=printlock, translator=translator, tag_outside_block=tag_outside_block,
+                              init_offset=init_offset)
     return True
+
 
 def extract_translations(input_filename, language):
     with printlock:
@@ -209,6 +222,7 @@ def extract_translations(input_filename, language):
     # we pickle and unpickle this manually because the regular unpickler will choke on it
     return magic.safe_dumps(translator.dialogue), translator.strings
 
+
 def worker(t):
     (args, filename, filesize) = t
     try:
@@ -217,26 +231,23 @@ def worker(t):
         else:
             if args.translation_file is not None:
                 translator = translate.Translator(None)
-                translator.language, translator.dialogue, translator.strings = magic.loads(args.translations, cls_factory_75)
+                translator.language, translator.dialogue, translator.strings = (
+                    magic.loads(args.translations, cls_factory_75))
             else:
                 translator = None
-            return decompile_rpyc(filename, args.clobber, args.dump, decompile_python=args.decompile_python,
-                                  no_pyexpr=args.no_pyexpr, comparable=args.comparable, translator=translator,
-                                  tag_outside_block=args.tag_outside_block, init_offset=args.init_offset, try_harder=args.try_harder)
-    except Exception as e:
+            return decompile_rpyc(filename, args.clobber, args.dump,
+                                  decompile_python=args.decompile_python, no_pyexpr=args.no_pyexpr, comparable=args.comparable, translator=translator, tag_outside_block=args.tag_outside_block, init_offset=args.init_offset, try_harder=args.try_harder)
+    except Exception:
         with printlock:
             print("Error while decompiling %s:" % filename)
             print(traceback.format_exc())
         return False
 
+
 def sharelock(lock):
     global printlock
     printlock = lock
 
-def main():
-    # python27 unrpyc.py [-c] [-d] [--python-screens|--ast-screens|--no-screens] file [file ...]
-    cc_num = cpu_count()
-    parser = argparse.ArgumentParser(description="Decompile .rpyc/.rpymc files")
 
     parser.add_argument('-c', '--clobber', dest='clobber', action='store_true',
                         help="overwrites existing output files")
@@ -359,11 +370,14 @@ def main():
         bad = results.count(False)
 
     if bad == 0:
-        print("Decompilation of %d script file%s successful" % (good, 's' if good>1 else ''))
+        print("Decompilation of %d script file%s successful" %
+              (good, 's' if good > 1 else ''))
     elif good == 0:
-        print("Decompilation of %d file%s failed" % (bad, 's' if bad>1 else ''))
+        print("Decompilation of %d file%s failed" %
+              (bad, 's' if bad > 1 else ''))
     else:
-        print("Decompilation of %d file%s successful, but decompilation of %d file%s failed" % (good, 's' if good>1 else '', bad, 's' if bad>1 else ''))
+        print("Decompilation of %d file%s successful, but decompilation of %d file%s failed" % (good, 's' if good > 1 else '', bad, 's' if bad > 1 else ''))
+
 
 if __name__ == '__main__':
     main()

@@ -19,26 +19,26 @@
 # SOFTWARE.
 
 
-import re
 import ast
-from operator import itemgetter
+import re
 from contextlib import contextmanager
+from operator import itemgetter
 
-from .util import DecompilerBase, WordConcatenator, reconstruct_paraminfo, \
-    simple_expression_guard, split_logical_lines, Dispatcher
 from . import codegen
+from .util import (DecompilerBase, Dispatcher, WordConcatenator, reconstruct_paraminfo,
+                   simple_expression_guard, split_logical_lines)
+
 
 # Main API
-
 def pprint(out_file, ast, indent_level=0, linenumber=1,
            decompile_python=False,
            skip_indent_until_write=False, printlock=None):
     return SLDecompiler(out_file, printlock=printlock,
-                 decompile_python=decompile_python).dump(
-                     ast, indent_level, linenumber, skip_indent_until_write)
+                        decompile_python=decompile_python).dump(
+        ast, indent_level, linenumber, skip_indent_until_write)
+
 
 # implementation
-
 class SLDecompiler(DecompilerBase):
     """
     an object which handles the decompilation of renpy screen language 1 screens to a given stream
@@ -120,7 +120,7 @@ class SLDecompiler(DecompilerBase):
                     keywords[value.linenumber] = WordConcatenator(False, True)
                 keywords[value.linenumber].append("%s %s" % (key, value))
         keywords = sorted([(k, v.join()) for k, v in keywords.items()],
-                          key=itemgetter(0)) # so the first one is right
+                          key=itemgetter(0))  # so the first one is right
         if self.decompile_python:
             self.print_keywords_and_nodes(keywords, None, True)
             with self.increase_indent():
@@ -146,7 +146,7 @@ class SLDecompiler(DecompilerBase):
         for i in nodes[1:]:
             if self.parse_header(i) == parent_id:
                 rv.append([i])
-                header = i
+                # header = i  # unused
             else:
                 rv[-1].append(i)
         return rv
@@ -176,11 +176,12 @@ class SLDecompiler(DecompilerBase):
             return nodes[0].lineno
 
     def make_printable_keywords(self, keywords, lineno):
-        keywords = [(i.arg, simple_expression_guard(self.to_source(i.value)),
-            i.value.lineno) for i in keywords if not (isinstance(
-            i.value, ast.Name) and (
-            (i.arg == 'id' and i.value.id.startswith('_')) or
-            (i.arg == 'scope' and i.value.id == '_scope')))]
+        keywords = [(
+            i.arg, simple_expression_guard(self.to_source(i.value)),
+            i.value.lineno) for i in keywords if not (
+                isinstance(i.value, ast.Name)
+                and ((i.arg == 'id' and i.value.id.startswith('_'))
+                     or (i.arg == 'scope' and i.value.id == '_scope')))]
         # Sort the keywords according to what line they belong on
         # The first element always exists for the line the block starts on,
         # even if there's no keywords that go on it
@@ -298,10 +299,9 @@ class SLDecompiler(DecompilerBase):
                 self.print_node(i[1][0], i[1][1:])
 
     def get_dispatch_key(self, node):
-        if (isinstance(node, ast.Expr) and
-                isinstance(node.value, ast.Call) and
-                isinstance(node.value.func, ast.Attribute) and
-                isinstance(node.value.func.value, ast.Name)):
+        if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Attribute)
+                and isinstance(node.value.func.value, ast.Name)):
             return node.value.func.value.id, node.value.func.attr
         else:
             return None
@@ -321,7 +321,7 @@ class SLDecompiler(DecompilerBase):
             func = self.dispatch.get(dispatch_key, self.print_python.__func__)
             if has_block:
                 if func not in (self.print_onechild.__func__,
-                    self.print_manychildren.__func__):
+                                self.print_manychildren.__func__):
                     raise BadHasBlockException()
                 func(self, header, code, True)
             else:
@@ -360,13 +360,12 @@ class SLDecompiler(DecompilerBase):
         # code[0].lineno is the line that the code actually starts on, but if
         # "python:" was used, then all of code's line numbers will be 1 greater
         # than the line each one should be.
-        source = self.to_source(ast.Module(body=code,
-                                           lineno=code[0].lineno,
-                                           col_offset=0)).rstrip().lstrip('\n')
+        source = self.to_source(ast.Module(
+            body=code, lineno=code[0].lineno, col_offset=0)).rstrip().lstrip('\n')
         lines = source.splitlines()
         if len(split_logical_lines(source)) == 1 and (
-                (not self.is_root and code[0].lineno < self.linenumber + 3) or
-                header.lineno >= code[0].lineno):
+                (not self.is_root and code[0].lineno < self.linenumber + 3)
+                or header.lineno >= code[0].lineno):
             # This is only one logical line, so it's possible that it was $,
             # and either it's not in the root (so we don't know what the
             # original source used), or it is in the root and we know it used $.
@@ -391,25 +390,26 @@ class SLDecompiler(DecompilerBase):
                 self.write_lines(lines)
 
     def is_renpy_if(self, nodes):
-        return len(nodes) == 1 and isinstance(nodes[0], ast.If) and (
-            nodes[0].body and self.parse_header(nodes[0].body[0])) and (
-                not nodes[0].orelse or self.is_renpy_if(nodes[0].orelse) or
-                self.parse_header(nodes[0].orelse[0]))
+        return (len(nodes) == 1 and isinstance(nodes[0], ast.If)
+                and (nodes[0].body and self.parse_header(nodes[0].body[0]))
+                and (not nodes[0].orelse or self.is_renpy_if(nodes[0].orelse)
+                     or self.parse_header(nodes[0].orelse[0])))
 
     def is_renpy_for(self, nodes):
-        return (len(nodes) == 2 and isinstance(nodes[0], ast.Assign) and
-            len(nodes[0].targets) == 1 and
-            isinstance(nodes[0].targets[0], ast.Name) and
-            re.match(r"_[0-9]+$", nodes[0].targets[0].id) and
-            isinstance(nodes[0].value, ast.Num) and nodes[0].value.n == 0 and
-            isinstance(nodes[1], ast.For) and not nodes[1].orelse and
-            nodes[1].body and self.parse_header(nodes[1].body[0]) and
-            isinstance(nodes[1].body[-1], ast.AugAssign) and
-            isinstance(nodes[1].body[-1].op, ast.Add) and
-            isinstance(nodes[1].body[-1].target, ast.Name) and
-            re.match(r"_[0-9]+$", nodes[1].body[-1].target.id) and
-            isinstance(nodes[1].body[-1].value, ast.Num) and
-            nodes[1].body[-1].value.n == 1)
+        return (len(nodes) == 2 and isinstance(nodes[0], ast.Assign)
+                and len(nodes[0].targets) == 1
+                and isinstance(nodes[0].targets[0], ast.Name)
+                and re.match(r"_[0-9]+$", nodes[0].targets[0].id)
+                and isinstance(nodes[0].value, ast.Num)
+                and nodes[0].value.n == 0 and isinstance(nodes[1], ast.For)
+                and not nodes[1].orelse and nodes[1].body
+                and self.parse_header(nodes[1].body[0])
+                and isinstance(nodes[1].body[-1], ast.AugAssign)
+                and isinstance(nodes[1].body[-1].op, ast.Add)
+                and isinstance(nodes[1].body[-1].target, ast.Name)
+                and re.match(r"_[0-9]+$", nodes[1].body[-1].target.id)
+                and isinstance(nodes[1].body[-1].value, ast.Num)
+                and nodes[1].body[-1].value.n == 1)
 
     def strip_parens(self, text):
         if text and text[0] == '(' and text[-1] == ')':
@@ -425,8 +425,8 @@ class SLDecompiler(DecompilerBase):
         self.advance_to_line(self.get_first_line(code))
         self.indent()
         self.write("if %s:" % self.strip_parens(self.to_source(code[0].test)))
-        if (len(code[0].body) >= 2 and self.parse_header(code[0].body[0]) and
-            self.parse_header(code[0].body[1])):
+        if (len(code[0].body) >= 2 and self.parse_header(code[0].body[0])
+                and self.parse_header(code[0].body[1])):
             body = code[0].body[1:]
         else:
             body = code[0].body
@@ -436,15 +436,15 @@ class SLDecompiler(DecompilerBase):
                 if self.is_renpy_if(code[0].orelse):
                     self.advance_to_line(code[0].orelse[0].test.lineno)
                     self.indent()
-                    self.write("el") # beginning of "elif"
+                    self.write("el")  # beginning of "elif"
                     self.skip_indent_until_write = True
                     self.print_if(header, code[0].orelse)
                 else:
                     self.indent()
                     self.write("else:")
-                    if (len(code[0].orelse) >= 2 and
-                        self.parse_header(code[0].orelse[0]) and
-                        self.parse_header(code[0].orelse[1])):
+                    if (len(code[0].orelse) >= 2
+                        and self.parse_header(code[0].orelse[0])
+                            and self.parse_header(code[0].orelse[1])):
                         orelse = code[0].orelse[1:]
                     else:
                         orelse = code[0].orelse
@@ -460,8 +460,8 @@ class SLDecompiler(DecompilerBase):
         self.write("for %s in %s:" % (
             self.strip_parens(self.to_source(line.target)),
             self.to_source(line.iter)))
-        if (len(line.body) >= 3 and self.parse_header(line.body[0]) and
-            self.parse_header(line.body[1])):
+        if (len(line.body) >= 3 and self.parse_header(line.body[0])
+                and self.parse_header(line.body[1])):
             body = line.body[1:]
         else:
             body = line.body
@@ -473,8 +473,8 @@ class SLDecompiler(DecompilerBase):
         # This function handles the use statement, which translates into a python expression "renpy.use_screen".
         # It would technically be possible for this to be a python statement, but the odds of this are very small.
         # renpy itself will insert some kwargs, we'll delete those and then parse the command here.
-        if (len(code) != 1 or not code[0].value.args or
-            not isinstance(code[0].value.args[0], ast.Str)):
+        if (len(code) != 1 or not code[0].value.args
+                or not isinstance(code[0].value.args[0], ast.Str)):
             return self.print_python(header, code)
         args, kwargs, exargs, exkwargs = self.parse_args(code[0])
         kwargs = [(key, value) for key, value in kwargs if not
@@ -499,14 +499,14 @@ class SLDecompiler(DecompilerBase):
 
     @dispatch(('_scope', 'setdefault'))
     def print_default(self, header, code):
-        if (len(code) != 1 or code[0].value.keywords or code[0].value.kwargs or
-            len(code[0].value.args) != 2 or code[0].value.starargs or
-            not isinstance(code[0].value.args[0], ast.Str)):
+        if (len(code) != 1 or code[0].value.keywords or code[0].value.kwargs
+            or len(code[0].value.args) != 2 or code[0].value.starargs
+                or not isinstance(code[0].value.args[0], ast.Str)):
             return self.print_python(header, code)
         self.advance_to_line(self.get_first_line(code))
         self.indent()
         self.write("default %s = %s" %
-            (code[0].value.args[0].s, self.to_source(code[0].value.args[1])))
+                   (code[0].value.args[0].s, self.to_source(code[0].value.args[1])))
 
     # These never have a ui.close() at the end
     @dispatch(('ui', 'add'))
@@ -595,7 +595,7 @@ class SLDecompiler(DecompilerBase):
                         self.write("has ")
                     self.skip_indent_until_write = True
                     self.print_nodes(block, 1, True)
-            except BadHasBlockException as e:
+            except BadHasBlockException:
                 self.rollback_state(state)
                 self.print_python(header, code)
             else:
@@ -628,8 +628,8 @@ class SLDecompiler(DecompilerBase):
     @dispatch(('ui', 'imagemap'))
     @dispatch(('ui', 'draggroup'))
     def print_manychildren(self, header, code, has_block=False):
-        if (self.get_dispatch_key(code[-1]) != ('ui', 'close') or
-            (len(code) != 2 and not self.parse_header(code[1]))):
+        if (self.get_dispatch_key(code[-1]) != ('ui', 'close')
+                or (len(code) != 2 and not self.parse_header(code[1]))):
             if has_block:
                 raise BadHasBlockException()
             self.print_python(header, code)
@@ -652,26 +652,25 @@ class SLDecompiler(DecompilerBase):
     def parse_header(self, header):
         # Given a Python AST node, returns the parent ID if the node represents
         # a header, or None otherwise.
-        if (isinstance(header, ast.Assign) and len(header.targets) == 1 and
-                isinstance(header.targets[0], ast.Name) and
-                re.match(r"_[0-9]+$", header.targets[0].id) and
-                isinstance(header.value, ast.Tuple) and
-                len(header.value.elts) == 2 and
-                isinstance(header.value.elts[0], ast.Name)):
+        if (isinstance(header, ast.Assign) and len(header.targets) == 1
+                and isinstance(header.targets[0], ast.Name)
+                and re.match(r"_[0-9]+$", header.targets[0].id)
+                and len(header.value.elts) == 2
+                and isinstance(header.value.elts[0], ast.Name)):
             parent_id = header.value.elts[0].id
             index = header.value.elts[1]
             if re.match(r"_([0-9]+|name)$", parent_id) and (
-                    isinstance(index, ast.Num) or
-                    (isinstance(index, ast.Name) and
-                    re.match(r"_[0-9]+$", index.id))):
+                    isinstance(index, ast.Num) or (
+                    isinstance(index, ast.Name) and re.match(r"_[0-9]+$", index.id))):
                 return parent_id
         return None
 
     def parse_args(self, node):
         return ([self.to_source(i) for i in node.value.args],
-            [(i.arg, self.to_source(i.value)) for i in node.value.keywords],
-            node.value.starargs and self.to_source(node.value.starargs),
-            node.value.kwargs and self.to_source(node.value.kwargs))
+                [(i.arg, self.to_source(i.value)) for i in node.value.keywords],
+                node.value.starargs and self.to_source(node.value.starargs),
+                node.value.kwargs and self.to_source(node.value.kwargs))
+
 
 class BadHasBlockException(Exception):
     pass

@@ -4,7 +4,8 @@ import re
 from io import StringIO
 from contextlib import contextmanager
 
-class DecompilerBase(object):
+
+class DecompilerBase:
     def __init__(self, out_file=None, indentation='    ', printlock=None):
         self.out_file = out_file or sys.stdout
         self.indentation = indentation
@@ -62,7 +63,8 @@ class DecompilerBase(object):
         Save our current state.
         """
         state = (self.out_file, self.skip_indent_until_write, self.linenumber,
-            self.block_stack, self.index_stack, self.indent_level, self.blank_line_queue)
+                 self.block_stack, self.index_stack, self.indent_level,
+                 self.blank_line_queue)
         self.out_file = StringIO()
         return state
 
@@ -157,7 +159,8 @@ class DecompilerBase(object):
     def print_node(self, ast):
         raise NotImplementedError()
 
-class First(object):
+
+class First:
     # An often used pattern is that on the first item
     # of a loop something special has to be done. This class
     # provides an easy object which on the first access
@@ -173,6 +176,7 @@ class First(object):
             return self.yes_value
         else:
             return self.no_value
+
 
 def reconstruct_paraminfo(paraminfo):
     if paraminfo is None:
@@ -208,6 +212,7 @@ def reconstruct_paraminfo(paraminfo):
 
     return "".join(rv)
 
+
 def reconstruct_arginfo(arginfo):
     if arginfo is None:
         return ""
@@ -230,12 +235,14 @@ def reconstruct_arginfo(arginfo):
 
     return "".join(rv)
 
-def string_escape(s): # TODO see if this needs to work like encode_say_string elsewhere
+
+def string_escape(s):  # TODO see if this needs to work like encode_say_string elsewhere
     s = s.replace('\\', '\\\\')
     s = s.replace('"', '\\"')
     s = s.replace('\n', '\\n')
     s = s.replace('\t', '\\t')
     return s
+
 
 # keywords used by ren'py's parser
 KEYWORDS = set(['$', 'as', 'at', 'behind', 'call', 'expression', 'hide',
@@ -244,6 +251,7 @@ KEYWORDS = set(['$', 'as', 'at', 'behind', 'call', 'expression', 'hide',
                 'while', 'zorder', 'transform'])
 
 word_regexp = '[a-zA-Z_\u00a0-\ufffd][0-9a-zA-Z_\u00a0-\ufffd]*'
+
 
 def simple_expression_guard(s):
     # Some things we deal with are supposed to be parsed by
@@ -259,10 +267,12 @@ def simple_expression_guard(s):
     else:
         return "(%s)" % s
 
+
 def split_logical_lines(s):
     return Lexer(s).split_logical_lines()
 
-class Lexer(object):
+
+class Lexer:
     # special lexer for simple_expressions the ren'py way
     # false negatives aren't dangerous. but false positives are
     def __init__(self, string):
@@ -301,7 +311,6 @@ class Lexer(object):
             return self.match(r"""(u?(?P<a>"(?:"")?|'(?:'')?).*?(?<=[^\\])(?:\\\\)*(?P=a))""")
         else:
             return self.re(r"""(u?(?P<a>"(?:"")?|'(?:'')?).*?(?<=[^\\])(?:\\\\)*(?P=a))""")
-
 
     def container(self):
         # parses something enclosed by [], () or {}'s. keyword something
@@ -349,17 +358,15 @@ class Lexer(object):
 
     def simple_expression(self):
         # test if the start string was a simple expression
-        start = self.pos
+        # start = self.pos  # never used?
 
         # check if there's anything in here acctually
         if self.eol():
             return False
 
         # parse anything which can be called or have attributes requested
-        if not(self.python_string() or
-               self.number() or
-               self.container() or
-               self.name()):
+        if not (self.python_string() or self.number() or self.container()
+                or self.name()):
             return False
 
         while not self.eol():
@@ -418,7 +425,7 @@ class Lexer(object):
             if self.python_string(False):
                 continue
 
-            self.re(r'\w+| +|.') # consume a word, whitespace or one symbol
+            self.re(r'\w+| +|.')  # consume a word, whitespace or one symbol
 
         if self.pos != startpos:
             lines.append(self.string[startpos:])
@@ -427,7 +434,9 @@ class Lexer(object):
 # Versions of Ren'Py prior to 6.17 put trailing whitespace on the end of
 # simple_expressions. This class attempts to preserve the amount of
 # whitespace if possible.
-class WordConcatenator(object):
+
+
+class WordConcatenator:
     def __init__(self, needs_space, reorderable=False):
         self.words = []
         self.needs_space = needs_space
@@ -451,6 +460,7 @@ class WordConcatenator(object):
         self.needs_space = rv[-1] != ' '
         return rv
 
+
 # Dict subclass for aesthetic dispatching. use @Dispatcher(data) to dispatch
 class Dispatcher(dict):
     def __call__(self, name):
@@ -458,6 +468,7 @@ class Dispatcher(dict):
             self[name] = func
             return func
         return closure
+
 
 # ren'py string handling
 def encode_say_string(s):
@@ -472,9 +483,10 @@ def encode_say_string(s):
 
     return "\"" + s + "\""
 
+
 # Adapted from Ren'Py's Say.get_code
 def say_get_code(ast, inmenu=False):
-    rv = [ ]
+    rv = []
 
     if ast.who:
         rv.append(ast.who)
@@ -487,7 +499,6 @@ def say_get_code(ast, inmenu=False):
         rv.extend(ast.temporary_attributes)
 
     # no dialogue_filter applies to us
-
     rv.append(encode_say_string(ast.what))
 
     if not ast.interact and not inmenu:

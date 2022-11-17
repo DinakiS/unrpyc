@@ -18,16 +18,14 @@ else:
 
 __all__ = [
     "load", "loads", "safe_load", "safe_loads", "safe_dump", "safe_dumps",
-    "fake_package", "remove_fake_package",
-    "FakeModule", "FakePackage", "FakePackageLoader",
-    "FakeClassType", "FakeClassFactory",
-    "FakeClass", "FakeStrict", "FakeWarning", "FakeIgnore",
-    "FakeUnpicklingError", "FakeUnpickler", "SafeUnpickler",
-    "SafePickler"
+    "fake_package", "remove_fake_package", "FakeModule", "FakePackage",
+    "FakePackageLoader", "FakeClassType", "FakeClassFactory", "FakeClass",
+    "FakeStrict", "FakeWarning", "FakeIgnore", "FakeUnpicklingError",
+    "FakeUnpickler", "SafeUnpickler", "SafePickler"
 ]
 
-# Fake class implementation
 
+# Fake class implementation
 class FakeClassType(type):
     """
     The metaclass used to create fake classes. To support comparisons between
@@ -68,7 +66,8 @@ class FakeClassType(type):
             attributes["__module__"] = module
 
         if "__module__" not in attributes:
-            raise TypeError("No module has been specified for FakeClassType {0}".format(name))
+            raise TypeError(
+                "No module has been specified for FakeClassType {0}".format(name))
 
         # assemble instance
         return type.__new__(cls, name, bases, attributes)
@@ -96,9 +95,9 @@ class FakeClassType(type):
         return self.__subclasscheck__(instance.__class__)
 
     def __subclasscheck__(self, subclass):
-        return (self == subclass or
-                (bool(subclass.__bases__) and
-                 any(self.__subclasscheck__(base) for base in subclass.__bases__)))
+        return (self == subclass or (bool(subclass.__bases__) and any(
+            self.__subclasscheck__(base) for base in subclass.__bases__)))
+
 
 # PY2 doesn't like the PY3 way of metaclasses and PY3 doesn't support the PY2 way
 # so we call the metaclass directly
@@ -106,53 +105,59 @@ FakeClass = FakeClassType("FakeClass", (), {"__doc__": """
 A barebones instance of :class:`FakeClassType`. Inherit from this to create fake classes.
 """}, module=__name__)
 
-class FakeStrict(FakeClass, object):
+
+class FakeStrict(FakeClass):
     def __new__(cls, *args, **kwargs):
         self = FakeClass.__new__(cls)
-        # renpy 7.5/8 combat; Check if correctly initialized
+        # renpy 7.5/8 compat; Check if correctly initialized
         # if args or kwargs:
         if not (any([(), ([], )]) in args) and kwargs != {}:
-            raise FakeUnpicklingError("{0} was instantiated with unexpected arguments {1}, {2}".format(cls, args, kwargs))
+            raise FakeUnpicklingError(
+                "{0} was instantiated with unexpected arguments {1}, {2}".format(cls, args, kwargs))
         return self
 
     def __setstate__(self, state):
         slotstate = None
 
-        if (isinstance(state, tuple) and len(state) == 2 and
-            (state[0] is None or isinstance(state[0], dict)) and
-            (state[1] is None or isinstance(state[1], dict))):
+        if (isinstance(state, tuple) and len(state) == 2
+            and (state[0] is None or isinstance(state[0], dict))
+                and (state[1] is None or isinstance(state[1], dict))):
             state, slotstate = state
 
         if state:
             # Don't have to check for slotstate here since it's either None or a dict
             if not isinstance(state, dict):
-                raise FakeUnpicklingError("{0}.__setstate__() got unexpected arguments {1}".format(self.__class__, state))
+                raise FakeUnpicklingError(
+                    "{0}.__setstate__() got unexpected arguments {1}".format(self.__class__, state))
             else:
                 self.__dict__.update(state)
 
         if slotstate:
             self.__dict__.update(slotstate)
 
-class FakeWarning(FakeClass, object):
+
+class FakeWarning(FakeClass):
     def __new__(cls, *args, **kwargs):
         self = FakeClass.__new__(cls)
         if args or kwargs:
-            print("{0} was instantiated with unexpected arguments {1}, {2}".format(cls, args, kwargs))
+            print("{0} was instantiated with unexpected arguments {1}, {2}".format(
+                cls, args, kwargs))
             self._new_args = args
         return self
 
     def __setstate__(self, state):
         slotstate = None
 
-        if (isinstance(state, tuple) and len(state) == 2 and
-            (state[0] is None or isinstance(state[0], dict)) and
-            (state[1] is None or isinstance(state[1], dict))):
+        if (isinstance(state, tuple) and len(state) == 2
+            and (state[0] is None or isinstance(state[0], dict))
+                and (state[1] is None or isinstance(state[1], dict))):
             state, slotstate = state
 
         if state:
             # Don't have to check for slotstate here since it's either None or a dict
             if not isinstance(state, dict):
-                print("{0}.__setstate__() got unexpected arguments {1}".format(self.__class__, state))
+                print("{0}.__setstate__() got unexpected arguments {1}".format(
+                    self.__class__, state))
                 self._setstate_args = state
             else:
                 self.__dict__.update(state)
@@ -160,7 +165,8 @@ class FakeWarning(FakeClass, object):
         if slotstate:
             self.__dict__.update(slotstate)
 
-class FakeIgnore(FakeClass, object):
+
+class FakeIgnore(FakeClass):
     def __new__(cls, *args, **kwargs):
         self = FakeClass.__new__(cls)
         if args:
@@ -172,9 +178,9 @@ class FakeIgnore(FakeClass, object):
     def __setstate__(self, state):
         slotstate = None
 
-        if (isinstance(state, tuple) and len(state) == 2 and
-            (state[0] is None or isinstance(state[0], dict)) and
-            (state[1] is None or isinstance(state[1], dict))):
+        if (isinstance(state, tuple) and len(state) == 2
+            and (state[0] is None or isinstance(state[0], dict))
+                and (state[1] is None or isinstance(state[1], dict))):
             state, slotstate = state
 
         if state:
@@ -187,7 +193,8 @@ class FakeIgnore(FakeClass, object):
         if slotstate:
             self.__dict__.update(slotstate)
 
-class FakeClassFactory(object):
+
+class FakeClassFactory:
     """
     Factory of fake classses. It will create fake class definitions on demand
     based on the passed arguments.
@@ -208,7 +215,7 @@ class FakeClassFactory(object):
         As an example, we can define the fake class generated for definition bar in module foo,
         which has a :meth:`__str__` method which returns ``"baz"``::
 
-           class bar(FakeStrict, object):
+           class bar(FakeStrict):
                def __str__(self):
                    return "baz"
 
@@ -217,7 +224,8 @@ class FakeClassFactory(object):
         Alternatively they can also be instantiated using :class:`FakeClassType` directly::
            special_cases = [FakeClassType(c.__name__, c.__bases__, c.__dict__, c.__module__)]
         """
-        self.special_cases = dict(((i.__module__, i.__name__), i) for i in special_cases)
+        self.special_cases = dict(
+            ((i.__module__, i.__name__), i) for i in special_cases)
         self.default = default_class
 
         self.class_cache = {}
@@ -245,8 +253,8 @@ class FakeClassFactory(object):
         self.class_cache[(module, name)] = klass
         return klass
 
-# Fake module implementation
 
+# Fake module implementation
 class FakeModule(types.ModuleType):
     """
     An object which pretends to be a module.
@@ -281,6 +289,7 @@ class FakeModule(types.ModuleType):
 
     It inherits from :class:`types.ModuleType`.
     """
+
     def __init__(self, name):
         super(FakeModule, self).__init__(name)
         sys.modules[name] = self
@@ -291,7 +300,7 @@ class FakeModule(types.ModuleType):
             try:
                 __import__(parent_name)
                 parent = sys.modules[parent_name]
-            except:
+            except ImportError:
                 parent = FakeModule(parent_name)
             setattr(parent, child_name, self)
 
@@ -303,11 +312,10 @@ class FakeModule(types.ModuleType):
 
     def __setattr__(self, name, value):
         # If a fakemodule is removed we need to remove its entry from sys.modules
-        if (name in self.__dict__ and
-            isinstance(self.__dict__[name], FakeModule) and not
-            isinstance(value, FakeModule)):
-
+        if (name in self.__dict__ and isinstance(self.__dict__[name], FakeModule)
+                and not isinstance(value, FakeModule)):
             self.__dict__[name]._remove()
+
         self.__dict__[name] = value
 
     def __delattr__(self, name):
@@ -345,9 +353,9 @@ class FakeModule(types.ModuleType):
         return self.__subclasscheck__(instance.__class__)
 
     def __subclasscheck__(self, subclass):
-        return (self == subclass or
-                (bool(subclass.__bases__) and
-                 any(self.__subclasscheck__(base) for base in subclass.__bases__)))
+        return (self == subclass or (bool(subclass.__bases__)
+                and any(self.__subclasscheck__(base) for base in subclass.__bases__)))
+
 
 class FakePackage(FakeModule):
     """
@@ -362,7 +370,8 @@ class FakePackage(FakeModule):
     def __call__(self, *args, **kwargs):
         # This mainly exists to print a nicer error message when
         # someone tries to call a FakePackage instance
-        raise TypeError("'{0}' FakePackage object is not callable".format(self.__name__))
+        raise TypeError(
+            "'{0}' FakePackage object is not callable".format(self.__name__))
 
     def __getattr__(self, name):
         modname = self.__name__ + "." + name
@@ -370,13 +379,14 @@ class FakePackage(FakeModule):
         if mod is None:
             try:
                 __import__(modname)
-            except:
+            except ImportError:
                 mod = FakePackage(modname)
             else:
                 mod = sys.modules[modname]
         return mod
 
-class FakePackageLoader(object):
+
+class FakePackageLoader:
     """
     A :term:`loader` of :class:`FakePackage` modules. When added to
     :data:`sys.meta_path` it will ensure that any attempt to import
@@ -387,6 +397,7 @@ class FakePackageLoader(object):
     results in a FakePackage, creating the illusion that *root* is an
     actual package tree.
     """
+
     def __init__(self, root):
         self.root = root
 
@@ -399,8 +410,8 @@ class FakePackageLoader(object):
     def load_module(self, fullname):
         return FakePackage(fullname)
 
-# Fake unpickler implementation
 
+# Fake unpickler implementation
 class FakeUnpicklingError(pickle.UnpicklingError):
     """
     Error raised when there is not enough information to perform the fake
@@ -444,7 +455,7 @@ class FakeUnpickler(pickle.Unpickler if PY2 else pickle._Unpickler):
         if mod is None:
             try:
                 __import__(module)
-            except:
+            except ImportError:
                 mod = FakeModule(module)
             else:
                 mod = sys.modules[module]
@@ -455,6 +466,7 @@ class FakeUnpickler(pickle.Unpickler if PY2 else pickle._Unpickler):
             setattr(mod, name, klass)
 
         return klass
+
 
 class SafeUnpickler(FakeUnpickler):
     """
@@ -490,9 +502,11 @@ class SafeUnpickler(FakeUnpickler):
 
     This inherits from :class:`FakeUnpickler`
     """
+
     def __init__(self, file, class_factory=None, safe_modules=(),
                  use_copyreg=False, encoding="bytes", errors="strict"):
-        FakeUnpickler.__init__(self, file, class_factory, encoding=encoding, errors=errors)
+        FakeUnpickler.__init__(self, file, class_factory,
+                               encoding=encoding, errors=errors)
         # A set of modules which are safe to load
         self.safe_modules = set(safe_modules)
         self.use_copyreg = use_copyreg
@@ -530,8 +544,8 @@ class SafePickler(pickle.Pickler if PY2 else pickle._Pickler):
 
         pickle.Pickler.save_global(self, obj, name, pack)
 
-# the main API
 
+# the main API
 def load(file, class_factory=None, encoding="bytes", errors="errors"):
     """
     Read a pickled object representation from the open binary :term:`file object` *file*
@@ -553,6 +567,7 @@ def load(file, class_factory=None, encoding="bytes", errors="errors"):
     """
     return FakeUnpickler(file, class_factory, encoding=encoding, errors=errors).load()
 
+
 def loads(string, class_factory=None, encoding="bytes", errors="errors"):
     """
     Simjilar to :func:`load`, but takes an 8-bit string (bytes in Python 3, str in Python 2)
@@ -560,6 +575,7 @@ def loads(string, class_factory=None, encoding="bytes", errors="errors"):
     """
     return FakeUnpickler(StringIO(string), class_factory,
                          encoding=encoding, errors=errors).load()
+
 
 def safe_load(file, class_factory=None, safe_modules=(), use_copyreg=False,
               encoding="bytes", errors="errors"):
@@ -603,11 +619,13 @@ def safe_loads(string, class_factory=None, safe_modules=(), use_copyreg=False,
     return SafeUnpickler(StringIO(string), class_factory, safe_modules, use_copyreg,
                          encoding=encoding, errors=errors).load()
 
+
 def safe_dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL):
     """
     A convenience function wrapping SafePickler. It functions similarly to pickle.dump
     """
     SafePickler(file, protocol).dump(obj)
+
 
 def safe_dumps(obj, protocol=pickle.HIGHEST_PROTOCOL):
     """
@@ -616,6 +634,7 @@ def safe_dumps(obj, protocol=pickle.HIGHEST_PROTOCOL):
     file = StringIO()
     SafePickler(file, protocol).dump(obj)
     return file.getvalue()
+
 
 def fake_package(name):
     """
@@ -642,6 +661,7 @@ def fake_package(name):
         sys.meta_path.insert(0, loader)
         return __import__(name)
 
+
 def remove_fake_package(name):
     """
     Removes the fake package tree mounted at *name*.
@@ -660,14 +680,16 @@ def remove_fake_package(name):
     # Get the package entry via its entry in sys.modules
     package = sys.modules.get(name, None)
     if package is None:
-        raise ValueError("No fake package with the name {0} found".format(name))
+        raise ValueError(
+            "No fake package with the name {0} found".format(name))
 
     if not isinstance(package, FakePackage):
         raise ValueError("The module {0} is not a fake package".format(name))
 
     # Attempt to remove the loader from sys.meta_path
 
-    loaders = [i for i in sys.meta_path if isinstance(i, FakePackageLoader) and i.root == name]
+    loaders = [i for i in sys.meta_path if isinstance(
+        i, FakePackageLoader) and i.root == name]
     for loader in loaders:
         sys.meta_path.remove(loader)
 

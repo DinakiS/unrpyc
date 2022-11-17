@@ -24,27 +24,27 @@ from operator import itemgetter
 from .util import DecompilerBase, First, reconstruct_paraminfo, \
     reconstruct_arginfo, split_logical_lines, Dispatcher
 
-from renpy import ui, sl2
-from renpy.ast import PyExpr
-from renpy.text import text
-from renpy.sl2 import sldisplayables as sld
-from renpy.display import layout, behavior, im, motion, dragdrop
+from renpy import ui, sl2  # pyright: ignore
+from renpy.ast import PyExpr  # pyright: ignore
+from renpy.text import text  # pyright: ignore
+from renpy.sl2 import sldisplayables as sld  # pyright: ignore
+from renpy.display import layout, behavior, im, motion, dragdrop  # pyright: ignore
+
 
 # Main API
-
 def pprint(out_file, ast, print_atl_callback, indent_level=0, linenumber=1,
            skip_indent_until_write=False, printlock=None, tag_outside_block=False):
     return SL2Decompiler(print_atl_callback, out_file, printlock=printlock, tag_outside_block=tag_outside_block).dump(
         ast, indent_level, linenumber, skip_indent_until_write)
 
-# Implementation
 
+# Implementation
 class SL2Decompiler(DecompilerBase):
     """
     An object which handles the decompilation of renpy screen language 2 screens to a given stream
     """
 
-    def __init__(self, print_atl_callback, out_file=None, indentation = '    ', printlock=None, tag_outside_block=False):
+    def __init__(self, print_atl_callback, out_file=None, indentation='    ', printlock=None, tag_outside_block=False):
         super(SL2Decompiler, self).__init__(out_file, indentation, printlock)
         self.print_atl_callback = print_atl_callback
         self.tag_outside_block = tag_outside_block
@@ -68,8 +68,9 @@ class SL2Decompiler(DecompilerBase):
             self.write(reconstruct_paraminfo(ast.parameters))
 
         # If we're decompiling screencode, print it. Else, insert a pass statement
-        self.print_keywords_and_children(ast.keyword,
-            ast.children, ast.location[1], tag=ast.tag, atl_transform=getattr(ast, 'atl_transform', None))
+        self.print_keywords_and_children(
+            ast.keyword, ast.children, ast.location[1], tag=ast.tag,
+            atl_transform=getattr(ast, 'atl_transform', None))
 
     @dispatch(sl2.slast.SLIf)
     def print_if(self, ast):
@@ -105,7 +106,9 @@ class SL2Decompiler(DecompilerBase):
     def print_block(self, ast):
         # A block contains possible keyword arguments and a list of child nodes
         # this is the reason if doesn't keep a list of children but special Blocks
-        self.print_keywords_and_children(ast.keyword, ast.children, None, atl_transform=getattr(ast, 'atl_transform', None))
+        self.print_keywords_and_children(
+            ast.keyword, ast.children, None, atl_transform=getattr(
+                ast, 'atl_transform', None))
 
     @dispatch(sl2.slast.SLFor)
     def print_for(self, ast):
@@ -121,7 +124,8 @@ class SL2Decompiler(DecompilerBase):
 
         self.indent()
         if hasattr(ast, "index_expression") and ast.index_expression is not None:
-            self.write("for %sindex %s in %s:" % (variable, ast.index_expression, ast.expression))
+            self.write("for %sindex %s in %s:" %
+                       (variable, ast.index_expression, ast.expression))
 
         else:
             self.write("for %sin %s:" % (variable, ast.expression))
@@ -196,14 +200,11 @@ class SL2Decompiler(DecompilerBase):
             # this is rather often the case. However, as it may be wrong we have to
             # print a debug message
             nameAndChildren = (ast.style, 'many')
-            self.print_debug(
- """Warning: Encountered a user-defined displayable of type '{}'.
-    Unfortunately, the name of user-defined displayables is not recorded in the compiled file.
-    For now the style name '{}' will be substituted.
-    To check if this is correct, find the corresponding renpy.register_sl_displayable call.""".format(
-                    ast.displayable, ast.style
-                )
-            )
+            self.print_debug("""
+                Warning: Encountered a user-defined displayable of type '{}'.
+                Unfortunately, the name of user-defined displayables is not recorded in the compiled file.
+                For now the style name '{}' will be substituted.
+                To check if this is correct, find the corresponding renpy.register_sl_displayable call.""".format(ast.displayable, ast.style))
         (name, children) = nameAndChildren
         self.indent()
         self.write(name)
@@ -218,13 +219,16 @@ class SL2Decompiler(DecompilerBase):
         # were used. We'll use one any time it's possible (except for
         # directly nesting them, or if they wouldn't contain any children),
         # since it results in cleaner code.
-        if (not has_block and children == 1 and len(ast.children) == 1 and
-            isinstance(ast.children[0], sl2.slast.SLDisplayable) and
-            ast.children[0].children and (not ast.keyword or
-                ast.children[0].location[1] > ast.keyword[-1][1].linenumber) and
-            (atl_transform is None or ast.children[0].location[1] > atl_transform.loc[1])):
-            self.print_keywords_and_children(ast.keyword, [],
-                ast.location[1], needs_colon=True, variable=variable, atl_transform=atl_transform)
+        if (not has_block and children == 1 and len(ast.children) == 1
+            and isinstance(ast.children[0], sl2.slast.SLDisplayable)
+            and ast.children[0].children
+            and (not ast.keyword
+            or ast.children[0].location[1] > ast.keyword[-1][1].linenumber)
+            and (atl_transform is None
+                 or ast.children[0].location[1] > atl_transform.loc[1])):
+            self.print_keywords_and_children(
+                ast.keyword, [], ast.location[1], needs_colon=True, variable=variable,
+                atl_transform=atl_transform)
             self.advance_to_line(ast.children[0].location[1])
             with self.increase_indent():
                 self.indent()
@@ -232,45 +236,46 @@ class SL2Decompiler(DecompilerBase):
                 self.skip_indent_until_write = True
                 self.print_displayable(ast.children[0], True)
         else:
-            self.print_keywords_and_children(ast.keyword, ast.children,
-                 ast.location[1], has_block=has_block, variable=variable, atl_transform=atl_transform)
+            self.print_keywords_and_children(
+                ast.keyword, ast.children, ast.location[1], has_block=has_block,
+                variable=variable, atl_transform=atl_transform)
 
     displayable_names = {
-        (behavior.OnEvent, None):          ("on", 0),
-        (behavior.OnEvent, 0):             ("on", 0),
-        (behavior.MouseArea, 0):           ("mousearea", 0),
-        (behavior.MouseArea, None):        ("mousearea", 0),
-        (ui._add, None):                   ("add", 0),
-        (sld.sl2add, None):                ("add", 0),
-        (ui._hotbar, "hotbar"):            ("hotbar", 0),
-        (sld.sl2vbar, None):               ("vbar", 0),
-        (sld.sl2bar, None):                ("bar", 0),
-        (ui._label, "label"):              ("label", 0),
-        (ui._textbutton, 0):               ("textbutton", 0),
-        (ui._textbutton, "button"):               ("textbutton", 0),
-        (ui._imagebutton, "image_button"): ("imagebutton", 0),
-        (im.image, "default"):             ("image", 0),
-        (behavior.Input, "input"):         ("input", 0),
-        (behavior.Timer, "default"):       ("timer", 0),
-        (ui._key, None):                   ("key", 0),
-        (text.Text, "text"):               ("text", 0),
-        (layout.Null, "default"):          ("null", 0),
-        (dragdrop.Drag, None):             ("drag", 1),
-        (dragdrop.Drag, "drag"):           ("drag", 1),
-        (motion.Transform, "transform"):   ("transform", 1),
-        (ui._hotspot, "hotspot"):          ("hotspot", 1),
-        (sld.sl2viewport, "viewport"):     ("viewport", 1),
-        (behavior.Button, "button"):       ("button", 1),
-        (layout.Window, "frame"):          ("frame", 1),
-        (layout.Window, "window"):         ("window", 1),
-        (dragdrop.DragGroup, None):        ("draggroup", 'many'),
-        (ui._imagemap, "imagemap"):        ("imagemap", 'many'),
-        (layout.Side, "side"):             ("side", 'many'),
-        (layout.Grid, "grid"):             ("grid", 'many'),
-        (sld.sl2vpgrid, "vpgrid"):         ("vpgrid", 'many'),
-        (layout.MultiBox, "fixed"):        ("fixed", 'many'),
-        (layout.MultiBox, "vbox"):         ("vbox", 'many'),
-        (layout.MultiBox, "hbox"):         ("hbox", 'many')
+        (behavior.OnEvent, None):           ("on", 0),  # noqa
+        (behavior.OnEvent, 0):              ("on", 0),  # noqa
+        (behavior.MouseArea, 0):            ("mousearea", 0),  # noqa
+        (behavior.MouseArea, None):         ("mousearea", 0),  # noqa
+        (ui._add, None):                    ("add", 0),  # noqa
+        (sld.sl2add, None):                 ("add", 0),  # noqa
+        (ui._hotbar, "hotbar"):             ("hotbar", 0),  # noqa
+        (sld.sl2vbar, None):                ("vbar", 0),  # noqa
+        (sld.sl2bar, None):                 ("bar", 0),  # noqa
+        (ui._label, "label"):               ("label", 0),  # noqa
+        (ui._textbutton, 0):                ("textbutton", 0),  # noqa
+        (ui._textbutton, "button"):         ("textbutton", 0),  # noqa
+        (ui._imagebutton, "image_button"):  ("imagebutton", 0),  # noqa
+        (im.image, "default"):              ("image", 0),  # noqa
+        (behavior.Input, "input"):          ("input", 0),  # noqa
+        (behavior.Timer, "default"):        ("timer", 0),  # noqa
+        (ui._key, None):                    ("key", 0),  # noqa
+        (text.Text, "text"):                ("text", 0),  # noqa
+        (layout.Null, "default"):           ("null", 0),  # noqa
+        (dragdrop.Drag, None):              ("drag", 1),  # noqa
+        (dragdrop.Drag, "drag"):            ("drag", 1),  # noqa
+        (motion.Transform, "transform"):    ("transform", 1),  # noqa
+        (ui._hotspot, "hotspot"):           ("hotspot", 1),  # noqa
+        (sld.sl2viewport, "viewport"):      ("viewport", 1),  # noqa
+        (behavior.Button, "button"):        ("button", 1),  # noqa
+        (layout.Window, "frame"):           ("frame", 1),  # noqa
+        (layout.Window, "window"):          ("window", 1),  # noqa
+        (dragdrop.DragGroup, None):         ("draggroup", 'many'),  # noqa
+        (ui._imagemap, "imagemap"):         ("imagemap", 'many'),  # noqa
+        (layout.Side, "side"):              ("side", 'many'),  # noqa
+        (layout.Grid, "grid"):              ("grid", 'many'),  # noqa
+        (sld.sl2vpgrid, "vpgrid"):          ("vpgrid", 'many'),  # noqa
+        (layout.MultiBox, "fixed"):         ("fixed", 'many'),  # noqa
+        (layout.MultiBox, "vbox"):          ("vbox", 'many'),  # noqa
+        (layout.MultiBox, "hbox"):          ("hbox", 'many')  # noqa
     }
 
     def print_keywords_and_children(self, keywords, children, lineno, needs_colon=False, has_block=False, tag=None, variable=None, atl_transform=None):
@@ -282,7 +287,8 @@ class SL2Decompiler(DecompilerBase):
         wrote_colon = False
         keywords_by_line = []
         current_line = (lineno, [])
-        keywords_somewhere = [] # These can go anywhere inside the block that there's room.
+        # These can go anywhere inside the block that there's room.
+        keywords_somewhere = []
         if variable is not None:
             if current_line[0] is None:
                 keywords_somewhere.extend(("as", variable))
@@ -311,7 +317,7 @@ class SL2Decompiler(DecompilerBase):
 
                 # force a newline
                 force_newline = True
-            
+
                 # just output the key
                 current_line[1].append(key)
 
@@ -355,9 +361,9 @@ class SL2Decompiler(DecompilerBase):
         # block, not in it
         block_contents = sorted(keywords_by_line[1:] + children_with_keywords,
                                 key=itemgetter(0))
-        if keywords_by_line[0][1]: # this never happens if lineno was None
+        if keywords_by_line[0][1]:  # this never happens if lineno was None
             self.write(" %s" % ' '.join(keywords_by_line[0][1]))
-        if keywords_somewhere: # this never happens if there's anything in block_contents
+        if keywords_somewhere:  # this never happens if there's anything in block_contents
             # Hard case: we need to put a keyword somewhere inside the block, but we have no idea which line to put it on.
             if lineno is not None:
                 self.write(":")
@@ -368,7 +374,8 @@ class SL2Decompiler(DecompilerBase):
                     with self.increase_indent():
                         self.indent()
                         self.write(' '.join(keywords_somewhere))
-                    self.print_nodes(children_after_keywords[index:], 0 if has_block else 1)
+                    self.print_nodes(
+                        children_after_keywords[index:], 0 if has_block else 1)
                     break
                 with self.increase_indent():
                     # Even if we're in a "has" block, we need to indent this child since there will be a keyword line after it.
@@ -404,4 +411,5 @@ class SL2Decompiler(DecompilerBase):
             with self.increase_indent():
                 self.indent()
                 self.write("at transform:")
-                self.linenumber = self.print_atl_callback(self.linenumber, self.indent_level, atl_transform)
+                self.linenumber = self.print_atl_callback(
+                    self.linenumber, self.indent_level, atl_transform)

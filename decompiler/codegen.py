@@ -42,18 +42,20 @@ Try = TryExcept = TryFinally = YieldFrom = MatMult = Await = type(None)
 
 from ast import *
 
-class Sep(object):
+class Sep:
     # Performs the common pattern of returning a different symbol the first
     # time the object is called
     def __init__(self, last, first=''):
         self.last = last
         self.first = first
         self.begin = True
+
     def __call__(self):
         if self.begin:
             self.begin = False
             return self.first
         return self.last
+
 
 def to_source(node, indent_with=' ' * 4, add_line_information=False, correct_line_numbers=False):
     """This function can convert a node tree back into python sourcecode.
@@ -95,44 +97,44 @@ class SourceGenerator(NodeVisitor):
     ARROW = ' -> '
 
     BOOLOP_SYMBOLS = {
-        And:        (' and ', 5),
-        Or:         (' or ',  4)
+        ast.And:        (' and ', 5),  # noqa
+        ast.Or:         (' or ',  4)  # noqa
     }
 
     BINOP_SYMBOLS = {
-        Add:        (' + ',  12),
-        Sub:        (' - ',  12),
-        Mult:       (' * ',  13),
-        MatMult:    (' @ ',  13),
-        Div:        (' / ',  13),
-        FloorDiv:   (' // ', 13),
-        Mod:        (' % ',  13),
-        Pow:        (' ** ', 15),
-        LShift:     (' << ', 11),
-        RShift:     (' >> ', 11),
-        BitOr:      (' | ',  8),
-        BitAnd:     (' & ',  10),
-        BitXor:     (' ^ ',  9)
+        ast.Add:        (' + ',  12),  # noqa
+        ast.Sub:        (' - ',  12),  # noqa
+        ast.Mult:       (' * ',  13),  # noqa
+        ast.MatMult:    (' @ ',  13),  # noqa
+        ast.Div:        (' / ',  13),  # noqa
+        ast.FloorDiv:   (' // ', 13),  # noqa
+        ast.Mod:        (' % ',  13),  # noqa
+        ast.Pow:        (' ** ', 15),  # noqa
+        ast.LShift:     (' << ', 11),  # noqa
+        ast.RShift:     (' >> ', 11),  # noqa
+        ast.BitOr:      (' | ',   8),  # noqa
+        ast.BitAnd:     (' & ',  10),  # noqa
+        ast.BitXor:     (' ^ ',   9)  # noqa
     }
 
     CMPOP_SYMBOLS = {
-        Eq:         (' == ',     7),
-        Gt:         (' > ',      7),
-        GtE:        (' >= ',     7),
-        In:         (' in ',     7),
-        Is:         (' is ',     7),
-        IsNot:      (' is not ', 7),
-        Lt:         (' < ',      7),
-        LtE:        (' <= ',     7),
-        NotEq:      (' != ',     7),
-        NotIn:      (' not in ', 7)
+        ast.Eq:         (' == ',     7),  # noqa
+        ast.Gt:         (' > ',      7),  # noqa
+        ast.GtE:        (' >= ',     7),  # noqa
+        ast.In:         (' in ',     7),  # noqa
+        ast.Is:         (' is ',     7),  # noqa
+        ast.IsNot:      (' is not ', 7),  # noqa
+        ast.Lt:         (' < ',      7),  # noqa
+        ast.LtE:        (' <= ',     7),  # noqa
+        ast.NotEq:      (' != ',     7),  # noqa
+        ast.NotIn:      (' not in ', 7)  # noqa
     }
 
     UNARYOP_SYMBOLS = {
-        Invert:     ('~',    14),
-        Not:        ('not ', 6),
-        UAdd:       ('+',    14),
-        USub:       ('-',    14)
+        ast.Invert:     ('~',    14),  # noqa
+        ast.Not:        ('not ',  6),  # noqa
+        ast.UAdd:       ('+',    14),  # noqa
+        ast.USub:       ('-',    14)  # noqa
     }
 
     BLOCK_NODES = (If, For, While, With, Try, TryExcept, TryFinally,
@@ -180,7 +182,7 @@ class SourceGenerator(NodeVisitor):
         if value < self.precedence_stack[-1][0]:
             self.write('(')
             self.can_newline = True
-        if ltr == False:
+        if ltr is False:
             value += 1
         self.precedence_stack.append([value, newline, ltr])
 
@@ -220,13 +222,14 @@ class SourceGenerator(NodeVisitor):
         # If this is the case, we have to handle them properly
         if self.correct_line_numbers:
             if not self.indented:
-                self.new_lines = max(self.new_lines, 1 if self.force_newline else 0)
+                self.new_lines = max(
+                    self.new_lines, 1 if self.force_newline else 0)
                 self.force_newline = False
 
                 if self.new_lines:
                     # we have new lines to print
                     if self.after_colon == 2:
-                        self.result.append(';'+'\\\n' * self.new_lines)
+                        self.result.append(';' + '\\\n' * self.new_lines)
                     else:
                         self.after_colon = 0
                         self.result.append('\n' * self.new_lines)
@@ -248,7 +251,6 @@ class SourceGenerator(NodeVisitor):
                     self.result.append(self.indent_with * (self.indentation + 1))
             self.new_lines = 0
 
-
         elif self.new_lines:
             # normal behaviour
             self.result.append('\n' * self.new_lines)
@@ -266,7 +268,7 @@ class SourceGenerator(NodeVisitor):
                 self.new_lines = 1
         else:
             if extra:
-                #Ignore extra
+                # Ignore extra
                 return
 
             self.indented = False
@@ -294,14 +296,15 @@ class SourceGenerator(NodeVisitor):
             self.line_number = node.lineno
 
     def body(self, statements):
-        self.force_newline = any(isinstance(i, self.BLOCK_NODES) for i in statements)
+        self.force_newline = any(isinstance(i, self.BLOCK_NODES)
+                                 for i in statements)
         self.indentation += 1
         self.after_colon = 1
         for stmt in statements:
             self.visit(stmt)
         self.indentation -= 1
         self.force_newline = True
-        self.after_colon = 0 # do empty blocks even exist?
+        self.after_colon = 0  # do empty blocks even exist?
 
     def body_or_else(self, node):
         self.body(node.body)
@@ -361,7 +364,8 @@ class SourceGenerator(NodeVisitor):
     def visit_AugAssign(self, node):
         self.newline(node)
         self.visit_bare(node.target)
-        self.write(self.BINOP_SYMBOLS[type(node.op)][0].rstrip() + self.ASSIGN.lstrip())
+        self.write(self.BINOP_SYMBOLS[type(node.op)]
+                   [0].rstrip() + self.ASSIGN.lstrip())
         self.visit_bareyield(node.value)
 
     def visit_Await(self, node):
@@ -508,8 +512,8 @@ class SourceGenerator(NodeVisitor):
         self.decorators(node)
         self.write('class %s' % node.name)
 
-        if (node.bases or (hasattr(node, 'keywords') and node.keywords) or
-                (hasattr(node, 'starargs') and (node.starargs or node.kwargs))):
+        if (node.bases or (hasattr(node, 'keywords') and node.keywords)
+                or (hasattr(node, 'starargs') and (node.starargs or node.kwargs))):
             self.paren_start()
             sep = Sep(self.COMMA)
 
@@ -871,7 +875,7 @@ class SourceGenerator(NodeVisitor):
         if guard or not node.elts:
             self.paren_end()
 
-    def _sequence_visit(left, right): # pylint: disable=E0213
+    def _sequence_visit(left, right):  # pylint: disable=E0213
         def visit(self, node):
             self.maybe_break(node)
             self.paren_start(left)
@@ -1013,8 +1017,8 @@ class SourceGenerator(NodeVisitor):
 
     def visit_YieldFrom(self, node, paren=True):
         # Even though yield and yield from technically occupy precedence level 1, certain code
-        # using them is illegal e.g. "return yield from a()" will not work unless you 
-        # put the yield from statement within parenthesis. 
+        # using them is illegal e.g. "return yield from a()" will not work unless you
+        # put the yield from statement within parenthesis.
         self.maybe_break(node)
         if paren:
             self.paren_start()

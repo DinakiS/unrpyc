@@ -19,7 +19,6 @@
 # SOFTWARE.
 
 
-
 # This file contains documented strategies used against known obfuscation techniques and some machinery
 # to test them against.
 
@@ -32,25 +31,29 @@
 # being layers of base64, string-escape, hex-encoding, zlib-compression, etc.
 # We handle this by just trying these by checking if they fit.
 
-import os
-import zlib
-import struct
 import base64
+import struct
+import zlib
 from collections import Counter
-from decompiler import magic
-import unrpyc
 
+import unrpyc
 
 # Extractors are simple functions of (fobj, slotno) -> bytes
 # They raise ValueError if they fail
 EXTRACTORS = []
+
+
 def extractor(f):
     EXTRACTORS.append(f)
     return f
 
+
 # Decryptors are simple functions of (bytes, Counter) ->bytes
-# They return None if they fail. If they return their input they're also considered to have failed.
+# They return None if they fail. If they return their input they're also considered
+# to have failed.
 DECRYPTORS = []
+
+
 def decryptor(f):
     DECRYPTORS.append(f)
     return f
@@ -75,7 +78,8 @@ def extract_slot_rpyc(f, slot):
     slots = {}
 
     while position + 12 <= len(data):
-        slotid, start, length = struct.unpack("<III", data[position : position + 12])
+        slotid, start, length = struct.unpack(
+            "<III", data[position: position + 12])
         if (slotid, start, length) == (0, 0, 0):
             break
 
@@ -91,7 +95,8 @@ def extract_slot_rpyc(f, slot):
         raise ValueError("Unknown slot id")
 
     start, length = slots[slot]
-    return data[start : start + length]
+    return data[start: start + length]
+
 
 @extractor
 def extract_slot_legacy(f, slot):
@@ -111,6 +116,7 @@ def extract_slot_legacy(f, slot):
 
     return data
 
+
 @extractor
 def extract_slot_headerscan(f, slot):
     """
@@ -121,9 +127,10 @@ def extract_slot_headerscan(f, slot):
 
     position = 0
     while position + 36 < len(data):
-        a,b,c,d,e,f,g,h,i = struct.unpack("<IIIIIIIII", data[position : position + 36])
+        a, b, c, d, e, f, g, h, i = struct.unpack(
+            "<IIIIIIIII", data[position: position + 36])
         if a == 1 and d == 2 and g == 0 and b + c == e:
-            break;
+            break
         position += 1
 
     else:
@@ -131,7 +138,8 @@ def extract_slot_headerscan(f, slot):
 
     slots = {}
     while position + 12 <= len(data):
-        slotid, start, length = struct.unpack("<III", data[position : position + 12])
+        slotid, start, length = struct.unpack(
+            "<III", data[position: position + 12])
         if (slotid, start, length) == (0, 0, 0):
             break
 
@@ -147,7 +155,8 @@ def extract_slot_headerscan(f, slot):
         raise ValueError("Unknown slot id")
 
     start, length = slots[slot]
-    return data[start : start + length]
+    return data[start: start + length]
+
 
 @extractor
 def extract_slot_zlibscan(f, slot):
@@ -190,6 +199,7 @@ def decrypt_zlib(data, count):
     except zlib.error:
         return None
 
+
 @decryptor
 def decrypt_hex(data, count):
     if not all(i in "abcdefABCDEF0123456789" for i in count.keys()):
@@ -199,6 +209,7 @@ def decrypt_hex(data, count):
     except Exception:
         return None
 
+
 @decryptor
 def decrypt_base64(data, count):
     if not all(i in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=\n" for i in count.keys()):
@@ -207,6 +218,7 @@ def decrypt_base64(data, count):
         return base64.b64decode(data)
     except Exception:
         return None
+
 
 @decryptor
 def decrypt_string_escape(data, count):
@@ -244,10 +256,10 @@ def assert_is_normal_rpyc(f):
         try:
             uncompressed = zlib.decompress(raw_data)
         except zlib.error:
-            raise ValueError("Did not find RENPY RPC2 header, but interpretation as legacy file failed")
+            raise ValueError(
+                "Did not find RENPY RPC2 header, but interpretation as legacy file failed")
 
         return uncompressed
-
 
     else:
         if len(header) < 46:
@@ -296,7 +308,8 @@ def read_ast(f):
         raise ValueError("\n".join(diagnosis))
 
     if len(raw_datas) != 1:
-        diagnosis.append("Strategies produced different results. Trying all options")
+        diagnosis.append(
+            "Strategies produced different results. Trying all options")
 
     data = None
     for raw_data in raw_datas:

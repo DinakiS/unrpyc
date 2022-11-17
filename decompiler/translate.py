@@ -18,14 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .util import say_get_code
-import renpy
-
 import hashlib
-import re
 from copy import copy
 
-class Translator(object):
+import renpy  # pyright: ignore
+
+from .util import say_get_code
+
+
+class Translator:
     def __init__(self, language, saving_translations=False):
         self.language = language
         self.saving_translations = saving_translations
@@ -59,7 +60,7 @@ class Translator(object):
     # Adapted from Ren'Py's Restructurer.create_translate
     def create_translate(self, block):
         if self.saving_translations:
-            return [] # Doesn't matter, since we're throwing this away in this case
+            return []  # Doesn't matter, since we're throwing this away in this case
 
         md5 = hashlib.md5()
 
@@ -69,7 +70,8 @@ class Translator(object):
             elif isinstance(i, renpy.ast.UserStatement):
                 code = i.line
             else:
-                raise Exception("Don't know how to get canonical code for a %s" % str(type(i)))
+                raise Exception(
+                    "Don't know how to get canonical code for a %s" % str(type(i)))
             md5.update(code.encode("utf-8") + b"\r\n")
 
         digest = md5.hexdigest()[:8]
@@ -110,8 +112,8 @@ class Translator(object):
 
     # Adapted from Ren'Py's Restructurer.callback
     def translate_dialogue(self, children):
-        new_children = [ ]
-        group = [ ]
+        new_children = []
+        group = []
 
         for i in children:
 
@@ -137,7 +139,7 @@ class Translator(object):
                 group.append(i)
                 tl = self.create_translate(group)
                 new_children.extend(tl)
-                group = [ ]
+                group = []
 
             elif hasattr(i, 'translatable') and i.translatable:
                 group.append(i)
@@ -146,13 +148,13 @@ class Translator(object):
                 if group:
                     tl = self.create_translate(group)
                     new_children.extend(tl)
-                    group = [ ]
+                    group = []
 
                 new_children.append(i)
 
         if group:
             nodes = self.create_translate(group)
             new_children.extend(nodes)
-            group = [ ]
+            group = []
 
         children[:] = new_children

@@ -20,17 +20,17 @@
 
 
 from .util import DecompilerBase, split_logical_lines, Dispatcher, string_escape
-from renpy.test import testast
+from renpy.test import testast  # pyright: ignore
+
 
 # Main API
-
 def pprint(out_file, ast, indent_level=0, linenumber=1,
            skip_indent_until_write=False, printlock=None):
     return TestcaseDecompiler(out_file, printlock=printlock).dump(
         ast, indent_level, linenumber, skip_indent_until_write)
 
-# Implementation
 
+# Implementation
 class TestcaseDecompiler(DecompilerBase):
     """
     An object which handles the decompilation of renpy testcase statements
