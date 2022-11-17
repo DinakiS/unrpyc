@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
+import sys
 import argparse
 import glob
 import itertools
@@ -249,57 +251,91 @@ def sharelock(lock):
     printlock = lock
 
 
-    parser.add_argument('-c', '--clobber', dest='clobber', action='store_true',
-                        help="overwrites existing output files")
+def _parse_args():
+    """python3 unrpyc.py [-c] [-d] [--python-screens|--ast-screens|--no-screens] file [file ...]"""
 
-    parser.add_argument('-d', '--dump', dest='dump', action='store_true',
-                        help="instead of decompiling, pretty print the ast to a file")
+    cc_num = cpu_count()
+    aps = argparse.ArgumentParser(description="Decompile .rpyc/.rpymc files")
+    aps.add_argument('-c', '--clobber',
+                     dest='clobber',
+                     action='store_true',
+                     help="overwrites existing output files")
+    aps.add_argument('-d', '--dump',
+                     dest='dump',
+                     action='store_true',
+                     help="instead of decompiling, pretty print the ast to a file")
+    aps.add_argument('-p', '--processes',
+                     dest='processes',
+                     action='store',
+                     type=int,
+                     choices=range(1, cc_num),
+                     default=cc_num - 1 if cc_num > 2 else 1,
+                     help="use the specified number or processes to decompile."
+                     "Defaults to the amount of hw threads available minus one, disabled when muliprocessing is unavailable.")
+    aps.add_argument('-t', '--translation-file',
+                     dest='translation_file',
+                     action='store',
+                     default=None,
+                     help="use the specified file to translate during decompilation")
+    aps.add_argument('-T', '--write-translation-file',
+                     dest='write_translation_file',
+                     action='store',
+                     default=None,
+                     help="store translations in the specified file instead of decompiling")
+    aps.add_argument('-l', '--language',
+                     dest='language',
+                     action='store',
+                     default='english',
+                     help="if writing a translation file, the language of the translations to write")
+    aps.add_argument('--sl1-as-python',
+                     dest='decompile_python',
+                     action='store_true',
+                     help="Only dumping and for decompiling screen language 1 screens. "
+                     "Convert SL1 Python AST to Python code instead of dumping it or converting it to screenlang.")
+    aps.add_argument('--comparable',
+                     dest='comparable',
+                     action='store_true',
+                     help="Only for dumping, remove several false differences when comparing dumps. "
+                     "This suppresses attributes that are different even when the code is identical, such as file modification times. ")
+    aps.add_argument('--no-pyexpr',
+                     dest='no_pyexpr',
+                     action='store_true',
+                     help="Only for dumping, disable special handling of PyExpr objects, instead printing them as strings. "
+                     "This is useful when comparing dumps from different versions of Ren'Py. "
+                     "It should only be used if necessary, since it will cause loss of information such as line numbers.")
+    aps.add_argument('--tag-outside-block',
+                     dest='tag_outside_block',
+                     action='store_true',
+                     help="Always put SL2 'tag's on the same line as 'screen' rather than inside the block. "
+                     "This will break compiling with Ren'Py 7.3 and above, but is needed to get correct line numbers "
+                     "from some files compiled with older Ren'Py versions.")
+    aps.add_argument('--init-offset',
+                     dest='init_offset',
+                     action='store_true',
+                     help="Attempt to guess when init offset statements were used and insert them. "
+                     "This is always safe to enable if the game's Ren'Py version supports init offset statements, "
+                     "and the generated code is exactly equivalent, only less cluttered.")
+    aps.add_argument('file',
+                     type=str,
+                     nargs='+',
+                     help="The filenames to decompile. "
+                     "All .rpyc files in any directories passed or their subdirectories will also be decompiled.")
+    aps.add_argument('--try-harder',
+                     dest="try_harder",
+                     action="store_true",
+                     help="Tries some workarounds against common obfuscation methods. This is a lot slower.")
+    aps.add_argument('--version',
+                     action='version',
+                     version=f'%(prog)s : { __title__} {__version__}')
 
-    parser.add_argument('-p', '--processes', dest='processes', action='store', type=int,
-                        choices=range(1, cc_num), default=cc_num - 1 if cc_num > 2 else 1,
-                        help="use the specified number or processes to decompile."
-                        "Defaults to the amount of hw threads available minus one, disabled when muliprocessing is unavailable.")
+    return aps.parse_args()
 
-    parser.add_argument('-t', '--translation-file', dest='translation_file', action='store', default=None,
-                        help="use the specified file to translate during decompilation")
 
-    parser.add_argument('-T', '--write-translation-file', dest='write_translation_file', action='store', default=None,
-                        help="store translations in the specified file instead of decompiling")
-
-    parser.add_argument('-l', '--language', dest='language', action='store', default='english',
-                        help="if writing a translation file, the language of the translations to write")
-
-    parser.add_argument('--sl1-as-python', dest='decompile_python', action='store_true',
-                        help="Only dumping and for decompiling screen language 1 screens. "
-                        "Convert SL1 Python AST to Python code instead of dumping it or converting it to screenlang.")
-
-    parser.add_argument('--comparable', dest='comparable', action='store_true',
-                        help="Only for dumping, remove several false differences when comparing dumps. "
-                        "This suppresses attributes that are different even when the code is identical, such as file modification times. ")
-
-    parser.add_argument('--no-pyexpr', dest='no_pyexpr', action='store_true',
-                        help="Only for dumping, disable special handling of PyExpr objects, instead printing them as strings. "
-                        "This is useful when comparing dumps from different versions of Ren'Py. "
-                        "It should only be used if necessary, since it will cause loss of information such as line numbers.")
-
-    parser.add_argument('--tag-outside-block', dest='tag_outside_block', action='store_true',
-                        help="Always put SL2 'tag's on the same line as 'screen' rather than inside the block. "
-                        "This will break compiling with Ren'Py 7.3 and above, but is needed to get correct line numbers "
-                        "from some files compiled with older Ren'Py versions.")
-
-    parser.add_argument('--init-offset', dest='init_offset', action='store_true',
-                        help="Attempt to guess when init offset statements were used and insert them. "
-                        "This is always safe to enable if the game's Ren'Py version supports init offset statements, "
-                        "and the generated code is exactly equivalent, only less cluttered.")
-
-    parser.add_argument('file', type=str, nargs='+',
-                        help="The filenames to decompile. "
-                        "All .rpyc files in any directories passed or their subdirectories will also be decompiled.")
-
-    parser.add_argument('--try-harder', dest="try_harder", action="store_true",
-                        help="Tries some workarounds against common obfuscation methods. This is a lot slower.")
-
-    args = parser.parse_args()
+def main(args):
+    """Main execution..."""
+    if not sys.version_info[:2] >= (3, 6):
+        raise Exception("Must be executed in Python 3.6 or later.\n"
+                        "You are running {}".format(sys.version))
 
     if args.write_translation_file and not args.clobber and path.exists(args.write_translation_file):
         # Fail early to avoid wasting time going through the files
@@ -380,4 +416,4 @@ def sharelock(lock):
 
 
 if __name__ == '__main__':
-    main()
+    main(_parse_args())
