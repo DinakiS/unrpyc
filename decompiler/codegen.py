@@ -35,12 +35,17 @@
     :license: BSD.
 """
 
+
+# replacement works so far but needs longer tests
+# from ast import *
+import ast
+
 # import sys
 # PY3 = sys.version_info >= (3, 0)
 # These might not exist, so we put them equal to NoneType
-Try = TryExcept = TryFinally = YieldFrom = MatMult = Await = type(None)
+Try = TryExcept = TryFinally = ast.YieldFrom = ast.MatMult = ast.Await = type(
+    None)
 
-from ast import *
 
 class Sep:
     # Performs the common pattern of returning a different symbol the first
@@ -84,7 +89,7 @@ def to_source(node, indent_with=' ' * 4, add_line_information=False, correct_lin
         return SourceGenerator(indent_with, add_line_information).process(node)
 
 
-class SourceGenerator(NodeVisitor):
+class SourceGenerator(ast.NodeVisitor):
     """This visitor is able to transform a well formed syntax tree into python
     sourcecode.  For more details have a look at the docstring of the
     `node_to_source` function.
@@ -137,8 +142,8 @@ class SourceGenerator(NodeVisitor):
         ast.USub:       ('-',    14)  # noqa
     }
 
-    BLOCK_NODES = (If, For, While, With, Try, TryExcept, TryFinally,
-                   FunctionDef, ClassDef)
+    BLOCK_NODES = (ast.If, ast.For, ast.While, ast.With, ast.Try, TryExcept, TryFinally,
+                   ast.FunctionDef, ast.ClassDef)
 
     def __init__(self, indent_with, add_line_information=False, correct_line_numbers=False, line_number=1):
         self.result = []
@@ -315,15 +320,15 @@ class SourceGenerator(NodeVisitor):
 
     def visit_bare(self, node):
         # this node is allowed to be a bare tuple
-        if isinstance(node, Tuple):
+        if isinstance(node, ast.Tuple):
             self.visit_Tuple(node, False)
         else:
             self.visit(node)
 
     def visit_bareyield(self, node):
-        if isinstance(node, Yield):
+        if isinstance(node, ast.Yield):
             self.visit_Yield(node, False)
-        elif isinstance(node, YieldFrom):
+        elif isinstance(node, ast.YieldFrom):
             self.visit_YieldFrom(node, False)
         else:
             self.visit_bare(node)
@@ -548,7 +553,7 @@ class SourceGenerator(NodeVisitor):
         self.write(':')
         self.body(node.body)
         while True:
-            if len(node.orelse) == 1 and isinstance(node.orelse[0], If):
+            if len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If):
                 node = node.orelse[0]
                 self.newline(node.test, force=True)
                 self.write('elif ')
@@ -601,7 +606,7 @@ class SourceGenerator(NodeVisitor):
             # in python 2, similarly to the elif statement, multiple nested context managers
             # are generally the multi-form of a single with statement
             self.visit_withitem(node)
-            while len(node.body) == 1 and isinstance(node.body[0], With):
+            while len(node.body) == 1 and isinstance(node.body[0], ast.With):
                 node = node.body[0]
                 self.write(self.COMMA)
                 self.visit_withitem(node)
@@ -681,7 +686,7 @@ class SourceGenerator(NodeVisitor):
             if node.name:
                 self.write(' as ')
                 # Compatability
-                if isinstance(node.name, AST):
+                if isinstance(node.name, ast.AST):
                     self.visit(node.name)
                 else:
                     self.write(node.name)
@@ -734,12 +739,11 @@ class SourceGenerator(NodeVisitor):
             self.write('raise')
 
     # Expressions
-
     def visit_Attribute(self, node):
         self.maybe_break(node)
         # Edge case: due to the use of \d*[.]\d* for floats \d*[.]\w*, you have
         # to put parenthesis around an integer literal do get an attribute from it
-        if isinstance(node.value, Num):
+        if isinstance(node.value, ast.Num):
             self.paren_start()
             self.visit(node.value)
             self.paren_end()
@@ -751,8 +755,8 @@ class SourceGenerator(NodeVisitor):
 
     def visit_Call(self, node):
         self.maybe_break(node)
-        #need to put parenthesis around numbers being called (this makes no sense)
-        if isinstance(node.func, Num):
+        # need to put parenthesis around numbers being called (this makes no sense)
+        if isinstance(node.func, ast.Num):
             self.paren_start()
             self.visit_Num(node.func)
             self.paren_end()
@@ -761,9 +765,9 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.func)
             self.prec_end()
         # special case generator expressions as only argument
-        if (len(node.args) == 1 and isinstance(node.args[0], GeneratorExp) and
-                not node.keywords and hasattr(node, 'starargs') and 
-                not node.starargs and not node.kwargs):
+        if (len(node.args) == 1 and isinstance(node.args[0], ast.GeneratorExp)
+            and not node.keywords and hasattr(node, 'starargs')
+                and not node.starargs and not node.kwargs):
             self.visit_GeneratorExp(node.args[0])
             return
 
@@ -903,10 +907,10 @@ class SourceGenerator(NodeVisitor):
     def visit_BinOp(self, node):
         self.maybe_break(node)
         symbol, precedence = self.BINOP_SYMBOLS[type(node.op)]
-        self.prec_start(precedence, not isinstance(node.op, Pow))
+        self.prec_start(precedence, not isinstance(node.op, ast.Pow))
 
         # work around python's negative integer literal optimization
-        if isinstance(node.op, Pow):
+        if isinstance(node.op, ast.Pow):
             self.visit(node.left)
             self.prec_middle(14)
         else:
@@ -958,7 +962,7 @@ class SourceGenerator(NodeVisitor):
     def visit_Subscript(self, node):
         self.maybe_break(node)
         # have to surround literals by parenthesis (at least in Py2)
-        if isinstance(node.value, Num):
+        if isinstance(node.value, ast.Num):
             self.paren_start()
             self.visit_Num(node.value)
             self.paren_end()
@@ -987,7 +991,7 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.upper)
         if node.step is not None:
             self.write(':')
-            if not (isinstance(node.step, Name) and node.step.id == 'None'):
+            if not (isinstance(node.step, ast.Name) and node.step.id == 'None'):
                 self.visit(node.step)
 
     def visit_Ellipsis(self, node):
@@ -999,7 +1003,7 @@ class SourceGenerator(NodeVisitor):
         for idx, item in enumerate(node.dims):
             if idx:
                 self.write(self.COMMA)
-            if isinstance(item, Index):
+            if isinstance(item, ast.Index):
                 self.visit_Index(item, True)
             else:
                 self.visit(item)
