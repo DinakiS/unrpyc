@@ -36,6 +36,7 @@ from . import testcasedecompiler  # noqa
 from unrpyc import _unrpyc_ver  # noqa
 
 
+__version__ = _unrpyc_ver.__version__
 __all__ = ["astdump", "codegen", "magic", "screendecompiler", "sl2decompiler", "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
 
 
@@ -118,7 +119,8 @@ class Decompiler(DecompilerBase):
         # if there's anything we wanted to write out but didn't yet, do it now
         for m in self.blank_line_queue:
             m(None)
-        self.write("\n# Decompiled by unrpyc: https://github.com/CensoredUsername/unrpyc\n")
+        self.write(f"\n  # Decompiled by unrpyc_{__version__}: "
+                   "https://github.com/CensoredUsername/unrpyc\n")
         assert not self.missing_init, "A required init, init label, or translate block was missing"
 
     def print_node(self, ast):

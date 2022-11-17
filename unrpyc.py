@@ -54,9 +54,13 @@ except ImportError:
 
 import decompiler
 from decompiler import astdump, magic, translate
+import _unrpyc_ver
+
+__title__ = "unrpyc"
+__version__ = _unrpyc_ver.__version__
+
 
 # special definitions for special classes
-
 class PyExpr(magic.FakeStrict, str):
     __module__ = "renpy.ast"
     def __new__(cls, s, filename, linenumber, py=None):
