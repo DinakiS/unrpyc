@@ -378,8 +378,7 @@ def main(args):
         return
 
     files = [(args, x, path.getsize(x)) for x in files]
-    processes = int(args.processes)
-    if processes > 1:
+    if args.processes > 1:
         # If a big file starts near the end, there could be a long time with
         # only one thread running, which is inefficient. Avoid this by starting
         # big files first.
@@ -387,7 +386,7 @@ def main(args):
 
         # v1.2.0 improvement
         # results = Pool(int(args.processes), sharelock, [printlock]).map(worker, files, 1)
-        with Pool(int(args.processes), sharelock, [printlock]) as pool:
+        with Pool(args.processes, sharelock, [printlock]) as pool:
             results = pool.map(worker, files, 1)
     else:
         # Decompile in the order Ren'Py loads in
