@@ -146,13 +146,13 @@ import deobfuscate  # nopep8 # noqa
 def revertable_switch(raw_dat):
     """Switches in a way between two instances of cls_factory. If a error from possible old code appears, it uses renpy.python instead of the new renpy.revertable module name."""
     try:
-        data, stmts = magic.safe_loads(raw_dat, cls_factory_74, {
+        _, stmts = magic.safe_loads(raw_dat, cls_factory_75, {
             "_ast", "collections"})
     except TypeError as err:
         if 'Revertable' in err.args[0]:
-            data, stmts = magic.safe_loads(raw_dat, cls_factory_75, {
+            _, stmts = magic.safe_loads(raw_dat, cls_factory_74, {
                 "_ast", "collections"})
-    return data, stmts
+    return stmts
 
 
 def read_ast_from_file(in_file):
