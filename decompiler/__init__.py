@@ -821,6 +821,11 @@ class Decompiler(DecompilerBase):
             with self.increase_indent():
                 self.print_lex(ast.block)
 
+    # Postuserstatement added in v7.3 and was missing; taken from user@VepsrP
+    @dispatch(renpy.ast.PostUserStatement)
+    def print_postuserstatement(self, ast):
+        pass
+
     def print_lex(self, lex):
         for file, linenumber, content, block in lex:
             self.advance_to_line(linenumber)
