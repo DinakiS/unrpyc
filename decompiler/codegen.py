@@ -43,7 +43,7 @@ import ast
 # import sys
 # PY3 = sys.version_info >= (3, 0)
 # These might not exist, so we put them equal to NoneType
-Try = TryExcept = TryFinally = ast.YieldFrom = ast.MatMult = ast.Await = type(
+ast.Try = TryExcept = TryFinally = ast.YieldFrom = ast.MatMult = ast.Await = type(
     None)
 
 
