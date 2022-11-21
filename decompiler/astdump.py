@@ -145,7 +145,9 @@ class AstDumper:
             name = ast.name[0]
             if isinstance(name, str):
                 name = name.encode('utf-8')
-            ast.name = (name.split(b'/')[-1], 0, 0)
+            # py3 combat; proactive try, never a error
+            # ast.name = (name.split(b'/')[-1], 0, 0)
+            ast.name = (name.split('/')[-1], 0, 0)
         elif key == 'location' and isinstance(ast.location, tuple):
             if len(ast.location) == 4:
                 ast.location = (ast.location[0].split(
@@ -250,8 +252,11 @@ class AstDumper:
     def print_string(self, ast):
         # prints the representation of a string. If there are newlines in this string,
         # it will print it as a docstring.
-        if b'\n' in ast:
-            astlist = ast.split(b'\n')
+        # py3 combat
+        # if b'\n' in ast:
+        #     astlist = ast.split(b'\n')
+        if '\n' in ast:
+            astlist = ast.split('\n')
             if isinstance(ast, str):
                 self.p('u')
             self.p('"""')
