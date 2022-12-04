@@ -240,42 +240,48 @@ class SL2Decompiler(DecompilerBase):
                 ast.keyword, ast.children, ast.location[1], has_block=has_block,
                 variable=variable, atl_transform=atl_transform)
 
+    # NOTE: 'new' displayables anno2022, see `/renpy/sl2/sldisplayables.py`
+    # 'deprecated' flags the ones which where already ~8 years ago remove. Should
+    # they still be supported?
     displayable_names = {
-        (behavior.OnEvent, None):           ("on", 0),  # noqa
-        (behavior.OnEvent, 0):              ("on", 0),  # noqa
-        (behavior.MouseArea, 0):            ("mousearea", 0),  # noqa
-        (behavior.MouseArea, None):         ("mousearea", 0),  # noqa
-        (ui._add, None):                    ("add", 0),  # noqa
-        (sld.sl2add, None):                 ("add", 0),  # noqa
-        (ui._hotbar, "hotbar"):             ("hotbar", 0),  # noqa
-        (sld.sl2vbar, None):                ("vbar", 0),  # noqa
-        (sld.sl2bar, None):                 ("bar", 0),  # noqa
-        (ui._label, "label"):               ("label", 0),  # noqa
-        (ui._textbutton, 0):                ("textbutton", 0),  # noqa
-        (ui._textbutton, "button"):         ("textbutton", 0),  # noqa
-        (ui._imagebutton, "image_button"):  ("imagebutton", 0),  # noqa
-        (im.image, "default"):              ("image", 0),  # noqa
-        (behavior.Input, "input"):          ("input", 0),  # noqa
-        (behavior.Timer, "default"):        ("timer", 0),  # noqa
-        (ui._key, None):                    ("key", 0),  # noqa
-        (text.Text, "text"):                ("text", 0),  # noqa
-        (layout.Null, "default"):           ("null", 0),  # noqa
-        (dragdrop.Drag, None):              ("drag", 1),  # noqa
-        (dragdrop.Drag, "drag"):            ("drag", 1),  # noqa
-        (motion.Transform, "transform"):    ("transform", 1),  # noqa
-        (ui._hotspot, "hotspot"):           ("hotspot", 1),  # noqa
-        (sld.sl2viewport, "viewport"):      ("viewport", 1),  # noqa
-        (behavior.Button, "button"):        ("button", 1),  # noqa
-        (layout.Window, "frame"):           ("frame", 1),  # noqa
-        (layout.Window, "window"):          ("window", 1),  # noqa
-        (dragdrop.DragGroup, None):         ("draggroup", 'many'),  # noqa
-        (ui._imagemap, "imagemap"):         ("imagemap", 'many'),  # noqa
-        (layout.Side, "side"):              ("side", 'many'),  # noqa
-        (layout.Grid, "grid"):              ("grid", 'many'),  # noqa
-        (sld.sl2vpgrid, "vpgrid"):          ("vpgrid", 'many'),  # noqa
-        (layout.MultiBox, "fixed"):         ("fixed", 'many'),  # noqa
-        (layout.MultiBox, "vbox"):          ("vbox", 'many'),  # noqa
-        (layout.MultiBox, "hbox"):          ("hbox", 'many')  # noqa
+        (behavior.AreaPicker, "default"):       ("areapicker", 1),  # noqa # new
+        (behavior.Button, "button"):            ("button", 1),  # noqa
+        (behavior.DismissBehavior, "default"):  ("dismiss", 0),  # noqa # new
+        (behavior.Input, "input"):              ("input", 0),  # noqa
+        (behavior.MouseArea, None):             ("mousearea", 0),  # noqa
+        (behavior.MouseArea, 0):                ("mousearea", 0),  # noqa
+        (behavior.OnEvent, None):               ("on", 0),  # noqa
+        (behavior.OnEvent, 0):                  ("on", 0),  # noqa
+        (behavior.Timer, "default"):            ("timer", 0),  # noqa
+        (dragdrop.Drag, None):                  ("drag", 1),  # noqa # deprecated?
+        (dragdrop.Drag, "drag"):                ("drag", 1),  # noqa
+        (dragdrop.DragGroup, None):             ("draggroup", 'many'),  # noqa
+        (im.image, "default"):                  ("image", 0),  # noqa
+        (layout.Grid, "grid"):                  ("grid", 'many'),  # noqa
+        (layout.MultiBox, "fixed"):             ("fixed", 'many'),  # noqa
+        (layout.MultiBox, "hbox"):              ("hbox", 'many'),  # noqa
+        (layout.MultiBox, "vbox"):              ("vbox", 'many'),  # noqa
+        (layout.NearRect, "default"):           ("nearrect", 0),  # noqa # new
+        (layout.Null, "default"):               ("null", 0),  # noqa
+        (layout.Side, "side"):                  ("side", 'many'),  # noqa
+        (layout.Window, "frame"):               ("frame", 1),  # noqa
+        (layout.Window, "window"):              ("window", 1),  # noqa
+        (motion.Transform, "transform"):        ("transform", 1),  # noqa
+        (text.Text, "text"):                    ("text", 0),  # noqa
+        (sld.sl2add, None):                     ("add", 0),  # noqa
+        (sld.sl2bar, None):                     ("bar", 0),  # noqa
+        (sld.sl2vbar, None):                    ("vbar", 0),  # noqa
+        (sld.sl2viewport, "viewport"):          ("viewport", 1),  # noqa
+        (sld.sl2vpgrid, "vpgrid"):              ("vpgrid", 'many'),  # noqa
+        (ui._add, None):                        ("add", 0),  # noqa
+        (ui._hotbar, "hotbar"):                 ("hotbar", 0),  # noqa
+        (ui._hotspot, "hotspot"):               ("hotspot", 1),  # noqa
+        (ui._key, None):                        ("key", 0),  # noqa
+        (ui._imagebutton, "image_button"):      ("imagebutton", 0),  # noqa
+        (ui._imagemap, "imagemap"):             ("imagemap", 'many'),  # noqa
+        (ui._label, "label"):                   ("label", 0),  # noqa
+        (ui._textbutton, 0):                    ("textbutton", 0),  # noqa # deprecated?
+        (ui._textbutton, "button"):             ("textbutton", 0)  # noqa
     }
 
     def print_keywords_and_children(self, keywords, children, lineno, needs_colon=False, has_block=False, tag=None, variable=None, atl_transform=None):
