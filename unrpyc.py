@@ -23,13 +23,12 @@
 
 import sys
 import argparse
-import glob
-import itertools
+from pathlib import Path as pt
+from functools import partial
 import struct
 import traceback
 import zlib
-from operator import itemgetter
-from os import path, walk
+
 
 try:
     from multiprocessing import Lock, Pool, cpu_count
@@ -185,29 +184,27 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
                    comparable=False, no_pyexpr=False, translator=None, tag_outside_block=False,
                    init_offset=False, try_harder=False):
     # Output filename is input filename but with .rpy extension
-    filepath, ext = path.splitext(input_filename)
     if dump:
-        out_filename = filepath + ".txt"
-    elif ext == ".rpymc":
-        out_filename = filepath + ".rpym"
-    else:
-        out_filename = filepath + ".rpy"
+        out_filename = input_filename.with_suffix('.txt')
+    elif input_filename.suffix == ('.rpyc'):
+        out_filename = input_filename.with_suffix('.rpy')
+    elif input_filename.suffix == ('.rpymc'):
+        out_filename = input_filename.with_suffix('.rpym')
 
     with printlock:
         print(("Decompiling %s to %s..." % (input_filename, out_filename)))
 
-        if not overwrite and path.exists(out_filename):
-            print("Output file already exists. Pass --clobber to overwrite.")
+        if not overwrite and out_filename.exists:
             return False  # Don't stop decompiling if one file already exists
 
-    with open(input_filename, 'rb') as in_file:
+    with input_filename.open('rb') as in_file:
         if try_harder:
             ast = deobfuscate.read_ast(in_file)
         else:
             ast = read_ast_from_file(in_file)
 
-    # py3compat: test if codecs is needet; but shouldn't
-    with open(out_filename, 'w', encoding='utf-8') as out_file:
+    # NOTE: PY3 compat: 'codecs' is not unnecessary
+    with out_filename.open('w', encoding='utf-8') as out_file:
         if dump:
             astdump.pprint(out_file, ast, decompile_python=decompile_python,
                            comparable=comparable, no_pyexpr=no_pyexpr)
@@ -222,7 +219,7 @@ def extract_translations(input_filename, language):
     with printlock:
         print("Extracting translations from %s..." % input_filename)
 
-    with open(input_filename, 'rb') as in_file:
+    with input_filename.open('rb') as in_file:
         ast = read_ast_from_file(in_file)
 
     translator = translate.Translator(language, True)
@@ -231,8 +228,7 @@ def extract_translations(input_filename, language):
     return magic.safe_dumps(translator.dialogue), translator.strings
 
 
-def worker(t):
-    (args, filename, filesize) = t
+def worker(args, filename):
     try:
         if args.write_translation_file:
             return extract_translations(filename, args.language)
@@ -257,6 +253,15 @@ def sharelock(lock):
     printlock = lock
 
 
+def check_inpath(inp):
+    """Helper to check if given path exist."""
+    inp = pt(inp)
+    if not inp.exists() or inp.is_symlink():
+        raise FileNotFoundError(f"Could the given path object ({inp})"
+                                "not find! Check the given input.")
+    return inp.resolve(strict=True)
+
+
 def _parse_args():
     """python3 unrpyc.py [-c] [-d] [--python-screens|--ast-screens|--no-screens] file [file ...]"""
 
@@ -275,7 +280,7 @@ def _parse_args():
                      action='store',
                      type=int,
                      choices=range(1, cc_num),
-                     default=cc_num - 1 if cc_num > 2 else 1,
+                     default=cc_num - 1 if cc_num > 2 else -2 if cc_num > 8 else 1,
                      help="use the specified number or processes to decompile."
                      "Defaults to the amount of hw threads available minus one, disabled when muliprocessing is unavailable.")
     aps.add_argument('-t', '--translation-file',
@@ -343,7 +348,7 @@ def main(args):
         raise Exception("Must be executed in Python 3.6 or later.\n"
                         "You are running {}".format(sys.version))
 
-    if args.write_translation_file and not args.clobber and path.exists(args.write_translation_file):
+    if args.write_translation_file and not args.clobber and pt(args.write_translation_file).exists():
         # Fail early to avoid wasting time going through the files
         print("Output translation file already exists. Pass --clobber to overwrite.")
         return
@@ -351,47 +356,36 @@ def main(args):
     if args.translation_file:
         with open(args.translation_file, 'rb') as in_file:
             args.translations = in_file.read()
+    # NOTE: v1.2.0 refactoring: Code till Pool reworked to pathlib usage
+    # Check target path(s)
+    filesAndDirs = list(map(check_inpath, args.file))
 
-    # Expand wildcards
-    def glob_or_complain(s):
-        retval = glob.glob(s)
-        if not retval:
-            print("File not found: " + s)
-        return retval
-    filesAndDirs = list(map(glob_or_complain, args.file))
-    # Concatenate lists
-    filesAndDirs = list(itertools.chain(*filesAndDirs))
-
-    # Recursively add .rpyc files from any directories passed
     files = []
-    for i in filesAndDirs:
-        if path.isdir(i):
-            for dirpath, dirnames, filenames in walk(i):
-                files.extend(path.join(dirpath, j) for j in filenames if len(j) >= 5 and j.endswith(('.rpyc', '.rpymc')))
+    for item in filesAndDirs:
+        if item.is_dir():
+            for entry in item.rglob('*'):
+                if entry.suffix in ('.rpyc', '.rpymc') and entry.is_file():
+                    files.append(entry)
         else:
-            files.append(i)
+            if item.suffix in ('.rpyc', '.rpymc'):
+                files.append(item)
 
-    # Check if we actually have files. Don't worry about
-    # no parameters passed, since ArgumentParser catches that
-    if len(files) == 0:
-        print("No script files to decompile.")
+    # Check if we actually have files. Don't worry about no parameters passed,
+    # since ArgumentParser catches that
+    if not files:
+        print("Found no script files to decompile.")
         return
 
-    files = [(args, x, path.getsize(x)) for x in files]
-    if args.processes > 1:
-        # If a big file starts near the end, there could be a long time with
-        # only one thread running, which is inefficient. Avoid this by starting
-        # big files first.
-        files.sort(key=itemgetter(2), reverse=True)
+    files.sort(key=lambda x: x.stat().st_size, reverse=True)
 
-        # v1.2.0 improvement
-        # results = Pool(int(args.processes), sharelock, [printlock]).map(worker, files, 1)
-        with Pool(args.processes, sharelock, [printlock]) as pool:
-            results = pool.map(worker, files, 1)
-    else:
-        # Decompile in the order Ren'Py loads in
-        files.sort(key=itemgetter(1))
-        results = list(map(worker, files))
+    # v1.2.0 changes:
+    # contextmanager
+    # passing filesize over is unneeded
+    # code for single process removed - mostly unused in multicore age
+    with Pool(args.processes, sharelock, [printlock]) as pool:
+        results = pool.map(partial(worker, args), files, 1)
+
+    # results = list(map(partial(worker, args), files))
 
     if args.write_translation_file:
         print("Writing translations to %s..." % args.write_translation_file)
