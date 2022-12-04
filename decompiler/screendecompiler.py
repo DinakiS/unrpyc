@@ -50,7 +50,9 @@ class SLDecompiler(DecompilerBase):
 
     def __init__(self, out_file=None, decompile_python=False,
                  indentation="    ", printlock=None):
-        super(SLDecompiler, self).__init__(out_file, indentation, printlock)
+        # NOTE: py2 code remove: 'super(class, self).method()' is identical to
+        # 'super().method()'
+        super().__init__(out_file, indentation, printlock)
         self.decompile_python = decompile_python
         self.should_advance_to_line = True
         self.is_root = True
@@ -64,19 +66,19 @@ class SLDecompiler(DecompilerBase):
 
     def advance_to_line(self, linenumber):
         if self.should_advance_to_line:
-            super(SLDecompiler, self).advance_to_line(linenumber)
+            super().advance_to_line(linenumber)
 
     def save_state(self):
-        return (super(SLDecompiler, self).save_state(),
-                self.should_advance_to_line, self.is_root)
+        return (super().save_state(), self.should_advance_to_line,
+                self.is_root)
 
     def commit_state(self, state):
-        super(SLDecompiler, self).commit_state(state[0])
+        super().commit_state(state[0])
 
     def rollback_state(self, state):
         self.should_advance_to_line = state[1]
         self.is_root = state[2]
-        super(SLDecompiler, self).rollback_state(state[0])
+        super().rollback_state(state[0])
 
     def to_source(self, node):
         return codegen.to_source(node, self.indentation, False, True)

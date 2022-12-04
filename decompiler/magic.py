@@ -283,7 +283,9 @@ class FakeModule(types.ModuleType):
     """
 
     def __init__(self, name):
-        super(FakeModule, self).__init__(name)
+        # NOTE: py2 code remove: 'super(class, self).method()' is identical to
+        # 'super().method()'
+        super().__init__(name)
         sys.modules[name] = self
 
         if "." in name:

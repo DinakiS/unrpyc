@@ -41,11 +41,16 @@ __all__ = ["astdump", "codegen", "magic", "screendecompiler", "sl2decompiler", "
 
 
 # Main API
-def pprint(out_file, ast, indent_level=0, decompile_python=False, printlock=None,
-           translator=None, init_offset=False, tag_outside_block=False):
-    Decompiler(out_file, printlock=printlock, decompile_python=decompile_python,
-               translator=translator).dump(ast, indent_level, init_offset,
-                                           tag_outside_block)
+def pprint(
+        out_file, ast, indent_level=0, decompile_python=False, printlock=None,
+        translator=None, init_offset=False, tag_outside_block=False):
+    Decompiler(
+        out_file, printlock=printlock, decompile_python=decompile_python,
+        translator=translator).dump(
+        ast, indent_level, init_offset, tag_outside_block)
+
+# NOTE: py2 code remove: 'super(class, self).method()' is identical to
+# 'super().method()'
 
 
 # Implementation
@@ -60,7 +65,7 @@ class Decompiler(DecompilerBase):
 
     def __init__(self, out_file=None, decompile_python=False,
                  indentation='    ', printlock=None, translator=None):
-        super(Decompiler, self).__init__(out_file, indentation, printlock)
+        super().__init__(out_file, indentation, printlock)
         self.decompile_python = decompile_python
         self.translator = translator
 
@@ -76,16 +81,19 @@ class Decompiler(DecompilerBase):
         self.tag_outside_block = False
 
     def advance_to_line(self, linenumber):
-        self.last_lines_behind = max(self.linenumber + (0 if self.skip_indent_until_write else 1) - linenumber, 0)
-        self.most_lines_behind = max(self.last_lines_behind, self.most_lines_behind)
-        super(Decompiler, self).advance_to_line(linenumber)
+        self.last_lines_behind = max(self.linenumber + (
+            0 if self.skip_indent_until_write else 1) - linenumber, 0)
+        self.most_lines_behind = max(
+            self.last_lines_behind, self.most_lines_behind)
+        super().advance_to_line(linenumber)
 
     def save_state(self):
-        return (super(Decompiler, self).save_state(),
-                self.paired_with, self.say_inside_menu, self.label_inside_menu, self.in_init, self.missing_init, self.most_lines_behind, self.last_lines_behind)
+        return (super().save_state(), self.paired_with, self.say_inside_menu,
+                self.label_inside_menu, self.in_init, self.missing_init,
+                self.most_lines_behind, self.last_lines_behind)
 
     def commit_state(self, state):
-        super(Decompiler, self).commit_state(state[0])
+        super().commit_state(state[0])
 
     def rollback_state(self, state):
         self.paired_with = state[1]
@@ -95,7 +103,7 @@ class Decompiler(DecompilerBase):
         self.missing_init = state[5]
         self.most_lines_behind = state[6]
         self.last_lines_behind = state[7]
-        super(Decompiler, self).rollback_state(state[0])
+        super().rollback_state(state[0])
 
     def dump(self, ast, indent_level=0, init_offset=False, tag_outside_block=False):
         if (isinstance(ast, (tuple, list)) and len(ast) > 1
@@ -115,7 +123,8 @@ class Decompiler(DecompilerBase):
             self.set_best_init_offset(ast)
 
         # skip_indent_until_write avoids an initial blank line
-        super(Decompiler, self).dump(ast, indent_level, skip_indent_until_write=True)
+        super().dump(ast, indent_level, skip_indent_until_write=True)
+
         # if there's anything we wanted to write out but didn't yet, do it now
         for m in self.blank_line_queue:
             m(None)

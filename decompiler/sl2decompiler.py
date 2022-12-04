@@ -44,8 +44,11 @@ class SL2Decompiler(DecompilerBase):
     An object which handles the decompilation of renpy screen language 2 screens to a given stream
     """
 
-    def __init__(self, print_atl_callback, out_file=None, indentation='    ', printlock=None, tag_outside_block=False):
-        super(SL2Decompiler, self).__init__(out_file, indentation, printlock)
+    # NOTE: py2 code remove: 'super(class, self).method()' is identical to
+    # 'super().method()'
+    def __init__(self, print_atl_callback, out_file=None, indentation='    ',
+                 printlock=None, tag_outside_block=False):
+        super().__init__(out_file, indentation, printlock)
         self.print_atl_callback = print_atl_callback
         self.tag_outside_block = tag_outside_block
 
