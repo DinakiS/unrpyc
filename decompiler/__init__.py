@@ -33,11 +33,10 @@ from . import codegen  # noqa
 from . import screendecompiler  # noqa
 from . import sl2decompiler  # noqa
 from . import testcasedecompiler  # noqa
-from unrpyc import _unrpyc_ver  # noqa
 
-
-__version__ = _unrpyc_ver.__version__
-__all__ = ["astdump", "codegen", "magic", "screendecompiler", "sl2decompiler", "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
+from unrpyc import __title__, __version__, __url__  # noqa
+__all__ = [
+    "astdump", "codegen", "magic", "screendecompiler", "sl2decompiler", "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
 
 
 # Main API
@@ -128,9 +127,11 @@ class Decompiler(DecompilerBase):
         # if there's anything we wanted to write out but didn't yet, do it now
         for m in self.blank_line_queue:
             m(None)
-        self.write(f"\n  # Decompiled by unrpyc_{__version__}: "
-                   "https://github.com/CensoredUsername/unrpyc\n")
-        assert not self.missing_init, "A required init, init label, or translate block was missing"
+        # self.write(f"\n  # Decompiled by unrpyc_v{__version__}: "
+        #            "https://github.com/CensoredUsername/unrpyc\n")
+        self.write(f"\n\n  # Decompiled by {__title__}_v{__version__}: {__url__}\n")
+        assert not self.missing_init, (
+            "A required init, init label, or translate block was missing")
 
     def print_node(self, ast):
         # We special-case line advancement for some types in their print
