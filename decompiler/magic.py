@@ -46,7 +46,6 @@ class FakeClassType(type):
     """
 
     # instance creation logic
-
     def __new__(cls, name, bases, attributes, module=None):
         # This would be a lie
         attributes.pop("__qualname__", None)
@@ -59,7 +58,7 @@ class FakeClassType(type):
 
         if "__module__" not in attributes:
             raise TypeError(
-                "No module has been specified for FakeClassType {0}".format(name))
+                f"No module has been specified for FakeClassType {name}.")
 
         # assemble instance
         return type.__new__(cls, name, bases, attributes)
@@ -68,7 +67,6 @@ class FakeClassType(type):
         type.__init__(self, name, bases, attributes)
 
     # comparison logic
-
     def __eq__(self, other):
         if not hasattr(other, "__name__"):
             return False
@@ -105,7 +103,7 @@ class FakeStrict(FakeClass):
         # if args or kwargs:
         if not (any([(), ([], )]) in args) and kwargs != {}:
             raise FakeUnpicklingError(
-                "{0} was instantiated with unexpected arguments {1}, {2}".format(cls, args, kwargs))
+                f"{cls} was instantiated with unexpected arguments {args}, {kwargs}")
         return self
 
     def __setstate__(self, state):
@@ -120,7 +118,7 @@ class FakeStrict(FakeClass):
             # Don't have to check for slotstate here since it's either None or a dict
             if not isinstance(state, dict):
                 raise FakeUnpicklingError(
-                    "{0}.__setstate__() got unexpected arguments {1}".format(self.__class__, state))
+                    f"{self.__class__}.__setstate__() got unexpected arguments {state}")
             else:
                 self.__dict__.update(state)
 
@@ -132,8 +130,7 @@ class FakeWarning(FakeClass):
     def __new__(cls, *args, **kwargs):
         self = FakeClass.__new__(cls)
         if args or kwargs:
-            print("{0} was instantiated with unexpected arguments {1}, {2}".format(
-                cls, args, kwargs))
+            print(f"{cls} was instantiated with unexpected arguments {args}, {kwargs}.")
             self._new_args = args
         return self
 
@@ -148,8 +145,8 @@ class FakeWarning(FakeClass):
         if state:
             # Don't have to check for slotstate here since it's either None or a dict
             if not isinstance(state, dict):
-                print("{0}.__setstate__() got unexpected arguments {1}".format(
-                    self.__class__, state))
+                print(f"{self.__class__}.__setstate__() got unexpected arguments"
+                      " {state}")
                 self._setstate_args = state
             else:
                 self.__dict__.update(state)
@@ -299,7 +296,7 @@ class FakeModule(types.ModuleType):
             setattr(parent, child_name, self)
 
     def __repr__(self):
-        return "<module '{0}' (fake)>".format(self.__name__)
+        return f"<module '{self.__name__}' (fake)>"
 
     def __str__(self):
         return self.__repr__()
@@ -365,7 +362,7 @@ class FakePackage(FakeModule):
         # This mainly exists to print a nicer error message when
         # someone tries to call a FakePackage instance
         raise TypeError(
-            "'{0}' FakePackage object is not callable".format(self.__name__))
+            f"'{self.__name__}' FakePackage object is not callable.")
 
     def __getattr__(self, name):
         modname = self.__name__ + "." + name
@@ -516,7 +513,7 @@ class SafeUnpickler(FakeUnpickler):
         if self.use_copyreg:
             return FakeUnpickler.get_extension(self, code)
         else:
-            return self.class_factory("extension_code_{0}".format(code), "copyreg")
+            return self.class_factory(f"extension_code_{code}", "copyreg")
 
 
 class SafePickler(pickle._Pickler):
@@ -600,7 +597,7 @@ def safe_load(file, class_factory=None, safe_modules=(), use_copyreg=False,
                          encoding=encoding, errors=errors).load()
 
 
-# py3 compat: at least needed if data src is py2 (also py3 renpy ?)
+# NOTE: PY3 compat: at least needed if data src is py2 (also py3 renpy ?)
 # old py2: encoding="bytes"
 def safe_loads(string, class_factory=None, safe_modules=(), use_copyreg=False,
                encoding="utf-8", errors="errors"):
@@ -672,11 +669,10 @@ def remove_fake_package(name):
     # Get the package entry via its entry in sys.modules
     package = sys.modules.get(name, None)
     if package is None:
-        raise ValueError(
-            "No fake package with the name {0} found".format(name))
+        raise ValueError(f"No fake package with the name {name} found.")
 
     if not isinstance(package, FakePackage):
-        raise ValueError("The module {0} is not a fake package".format(name))
+        raise ValueError(f"The module {name} is not a fake package.")
 
     # Attempt to remove the loader from sys.meta_path
 

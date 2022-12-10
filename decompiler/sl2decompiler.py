@@ -32,16 +32,20 @@ from renpy.display import layout, behavior, im, motion, dragdrop  # pyright: ign
 
 
 # Main API
-def pprint(out_file, ast, print_atl_callback, indent_level=0, linenumber=1,
-           skip_indent_until_write=False, printlock=None, tag_outside_block=False):
-    return SL2Decompiler(print_atl_callback, out_file, printlock=printlock, tag_outside_block=tag_outside_block).dump(
+def pprint(
+    out_file, ast, print_atl_callback, indent_level=0, linenumber=1,
+        skip_indent_until_write=False, printlock=None, tag_outside_block=False):
+    return SL2Decompiler(
+        print_atl_callback, out_file, printlock=printlock,
+        tag_outside_block=tag_outside_block).dump(
         ast, indent_level, linenumber, skip_indent_until_write)
 
 
 # Implementation
 class SL2Decompiler(DecompilerBase):
     """
-    An object which handles the decompilation of renpy screen language 2 screens to a given stream
+    An object which handles the decompilation of renpy screen language 2 screens to a
+    given stream
     """
 
     # NOTE: py2 code remove: 'super(class, self).method()' is identical to
@@ -203,11 +207,14 @@ class SL2Decompiler(DecompilerBase):
             # this is rather often the case. However, as it may be wrong we have to
             # print a debug message
             nameAndChildren = (ast.style, 'many')
-            self.print_debug("""
-                Warning: Encountered a user-defined displayable of type '{}'.
-                Unfortunately, the name of user-defined displayables is not recorded in the compiled file.
-                For now the style name '{}' will be substituted.
-                To check if this is correct, find the corresponding renpy.register_sl_displayable call.""".format(ast.displayable, ast.style))
+            self.print_debug(f"""
+                Warning: We encountered a user-defined displayable of type
+                '{ast.displayable}'.
+                Unfortunately, the name of user-defined displayables is not recorded in
+                the compiled file. For now the style name '{ast.style}' will be
+                substituted.
+                To check if this is correct, find the corresponding
+                renpy.register_sl_displayable call.\n""")
         (name, children) = nameAndChildren
         self.indent()
         self.write(name)
@@ -222,11 +229,12 @@ class SL2Decompiler(DecompilerBase):
         # were used. We'll use one any time it's possible (except for
         # directly nesting them, or if they wouldn't contain any children),
         # since it results in cleaner code.
-        if (not has_block and children == 1 and len(ast.children) == 1
+        if (not has_block and children == 1
+            and len(ast.children) == 1
             and isinstance(ast.children[0], sl2.slast.SLDisplayable)
             and ast.children[0].children
             and (not ast.keyword
-            or ast.children[0].location[1] > ast.keyword[-1][1].linenumber)
+                 or ast.children[0].location[1] > ast.keyword[-1][1].linenumber)
             and (atl_transform is None
                  or ast.children[0].location[1] > atl_transform.loc[1])):
             self.print_keywords_and_children(
@@ -331,7 +339,9 @@ class SL2Decompiler(DecompilerBase):
                 current_line[1].append(key)
 
             else:
-                if current_line[0] is None or value.linenumber > current_line[0] or force_newline:
+                if (current_line[0] is None
+                    or value.linenumber > current_line[0]
+                        or force_newline):
                     force_newline = False
                     keywords_by_line.append(current_line)
                     current_line = (value.linenumber, [])
@@ -406,6 +416,7 @@ class SL2Decompiler(DecompilerBase):
                 self.write(":")
                 wrote_colon = True
             self.print_nodes(children_after_keywords, 0 if has_block else 1)
+
         if atl_transform is not None:
             # "at transform:", possibly preceded by other keywords, and followed by an ATL block
             # TODO this doesn't always go at the end. Use line numbers to figure out where it goes

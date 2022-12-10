@@ -20,7 +20,8 @@ class DecompilerBase:
 
     def dump(self, ast, indent_level=0, linenumber=1, skip_indent_until_write=False):
         """
-        Write the decompiled representation of `ast` into the opened file given in the constructor
+        Write the decompiled representation of `ast` into the opened file given in the
+        constructor
         """
         self.indent_level = indent_level
         self.linenumber = linenumber
@@ -81,7 +82,8 @@ class DecompilerBase:
         Roll back to a saved state.
         """
         (self.out_file, self.skip_indent_until_write, self.linenumber,
-            self.block_stack, self.index_stack, self.indent_level, self.blank_line_queue) = state
+            self.block_stack, self.index_stack, self.indent_level,
+            self.blank_line_queue) = state
 
     def advance_to_line(self, linenumber):
         # If there was anything that we wanted to do as soon as we found a blank line,
@@ -89,23 +91,24 @@ class DecompilerBase:
         self.blank_line_queue = [m for m in self.blank_line_queue if m(linenumber)]
         if self.linenumber < linenumber:
             # Stop one line short, since the call to indent() will advance the last line.
-            # Note that if self.linenumber == linenumber - 1, this will write the empty string.
+            # Note that if self.linenumber == linenumber - 1, this will write the empty
+            # string.
             # This is to make sure that skip_indent_until_write is cleared in that case.
             self.write("\n" * (linenumber - self.linenumber - 1))
 
     def do_when_blank_line(self, m):
         """
-        Do something the next time we find a blank line. m should be a method that takes one
-        parameter (the line we're advancing to), and returns whether or not it needs to run
-        again.
+        Do something the next time we find a blank line. m should be a method that takes
+        one parameter (the line we're advancing to), and returns whether or not it needs
+        to run again.
         """
         self.blank_line_queue.append(m)
 
     def indent(self):
         """
         Shorthand method for pushing a newline and indenting to the proper indent level
-        Setting skip_indent_until_write causes calls to this method to be ignored until something
-        calls the write method
+        Setting skip_indent_until_write causes calls to this method to be ignored until
+        something calls the write method
         """
         if not self.skip_indent_until_write:
             self.write('\n' + self.indentation * self.indent_level)
@@ -161,10 +164,9 @@ class DecompilerBase:
 
 
 class First:
-    # An often used pattern is that on the first item
-    # of a loop something special has to be done. This class
-    # provides an easy object which on the first access
-    # will return True, but any subsequent accesses False
+    # An often used pattern is that on the first item of a loop something special has to
+    # be done. This class provides an easy object which on the first access will return
+    # True, but any subsequent accesses False
     def __init__(self, yes_value=True, no_value=False):
         self.yes_value = yes_value
         self.no_value = no_value
@@ -224,7 +226,7 @@ def reconstruct_arginfo(arginfo):
         if name is not None:
             rv.append("%s=" % name)
         rv.append(val)
-    # renpy 7.5/8 compat; check for existenz of attrs extrapos, extrakw
+    # NOTE: RENPY 7.5/8 compat; check now also if `attrs extrapos, extrakw` exist
     if hasattr(arginfo, 'extrapos') and arginfo.extrapos:
         rv.append(sep())
         rv.append("*%s" % arginfo.extrapos)
@@ -245,21 +247,19 @@ def string_escape(s):  # TODO see if this needs to work like encode_say_string e
 
 
 # keywords used by ren'py's parser
-KEYWORDS = set(['$', 'as', 'at', 'behind', 'call', 'expression', 'hide',
-                'if', 'in', 'image', 'init', 'jump', 'menu', 'onlayer',
-                'python', 'return', 'scene', 'set', 'show', 'with',
-                'while', 'zorder', 'transform'])
+KEYWORDS = set([
+    '$', 'as', 'at', 'behind', 'call', 'expression', 'hide', 'if', 'in', 'image',
+    'init', 'jump', 'menu', 'onlayer', 'python', 'return', 'scene', 'set', 'show',
+    'with', 'while', 'zorder', 'transform'])
 
 word_regexp = '[a-zA-Z_\u00a0-\ufffd][0-9a-zA-Z_\u00a0-\ufffd]*'
 
 
 def simple_expression_guard(s):
-    # Some things we deal with are supposed to be parsed by
-    # ren'py's Lexer.simple_expression but actually cannot
-    # be parsed by it. figure out if this is the case
-    # a slightly more naive approach woudl be to check
-    # for spaces in it and surround it with () if necessary
-    # but we're not naive
+    # Some things we deal with are supposed to be parsed by ren'py's Lexer.
+    # simple_expression but actually cannot be parsed by it. Figure out if this is the
+    # case. A slightly more naive approach would be to check for spaces in it and
+    # surround it with () if necessary, but we're not naive
     s = s.strip()
 
     if Lexer(s).simple_expression():
@@ -305,8 +305,8 @@ class Lexer:
 
     def python_string(self, clear_whitespace=True):
         # parse strings the ren'py way (don't parse docstrings, no b/r in front allowed)
-        # edit: now parses docstrings correctly. There was a degenerate case where '''string'string''' would
-        # result in issues
+        # edit: now parses docstrings correctly. There was a degenerate case where
+        # '''string'string''' would result in issues
         if clear_whitespace:
             return self.match(r"""(u?(?P<a>"(?:"")?|'(?:'')?).*?(?<=[^\\])(?:\\\\)*(?P=a))""")
         else:
@@ -358,7 +358,7 @@ class Lexer:
 
     def simple_expression(self):
         # test if the start string was a simple expression
-        # start = self.pos  # never used?
+        # start = self.pos  # NOTE: never used?
 
         # check if there's anything in here acctually
         if self.eol():
@@ -390,8 +390,7 @@ class Lexer:
 
     def split_logical_lines(self):
         # split a sequence in logical lines
-        # this behaves similarly to .splitlines() which will ignore
-        # a trailing \n
+        # this behaves similarly to .splitlines() which will ignore a trailing \n
         lines = []
 
         contained = 0
@@ -401,7 +400,8 @@ class Lexer:
         while self.pos < self.length:
             c = self.string[self.pos]
 
-            if c == '\n' and not contained and (not self.pos or self.string[self.pos - 1] != '\\'):
+            if (c == '\n' and not contained and (
+                    not self.pos or self.string[self.pos - 1] != '\\')):
                 lines.append(self.string[startpos:self.pos])
                 # the '\n' is not included in the emitted line
                 self.pos += 1
@@ -431,11 +431,10 @@ class Lexer:
             lines.append(self.string[startpos:])
         return lines
 
+
 # Versions of Ren'Py prior to 6.17 put trailing whitespace on the end of
-# simple_expressions. This class attempts to preserve the amount of
-# whitespace if possible.
-
-
+# simple_expressions. This class attempts to preserve the amount of whitespace if
+# possible.
 class WordConcatenator:
     def __init__(self, needs_space, reorderable=False):
         self.words = []

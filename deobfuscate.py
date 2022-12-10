@@ -161,8 +161,9 @@ def extract_slot_headerscan(f, slot):
 @extractor
 def extract_slot_zlibscan(f, slot):
     """
-    Slot extractor for things that fucked with the header structure to the point where it's easier
-    to just not bother with it and instead we just look for valid zlib chunks directly.
+    Slot extractor for things that fucked with the header structure to the point where
+    it's easier to just not bother with it and instead we just look for valid zlib
+    chunks directly.
     """
     f.seek(0)
     data = f.read()
@@ -212,7 +213,9 @@ def decrypt_hex(data, count):
 
 @decryptor
 def decrypt_base64(data, count):
-    if not all(i in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=\n" for i in count.keys()):
+    if not all(
+        i in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=\n"
+            for i in count.keys()):
         return None
     try:
         return base64.b64decode(data)
@@ -236,8 +239,8 @@ def decrypt_string_escape(data, count):
 def assert_is_normal_rpyc(f):
     """
     Analyze the structure of a single rpyc file object for correctness.
-    Does not actually say anything about the _contents_ of that section, just that we were able
-    to slice it out of there.
+    Does not actually say anything about the _contents_ of that section, just that we
+    were able to slice it out of there.
 
     If succesful, returns the uncompressed contents of the first storage slot.
     """
@@ -257,7 +260,8 @@ def assert_is_normal_rpyc(f):
             uncompressed = zlib.decompress(raw_data)
         except zlib.error:
             raise ValueError(
-                "Did not find RENPY RPC2 header, but interpretation as legacy file failed")
+                "Did not find RENPY RPC2 header, but interpretation as legacy file"
+                " failed")
 
         return uncompressed
 
@@ -269,7 +273,8 @@ def assert_is_normal_rpyc(f):
         a, b, c, d, e, f, g, h, i = struct.unpack("<IIIIIIIII", header[10: 46])
 
         # does the header format match default ren'py generated files?
-        if not (a == 1 and b == 46 and d == 2 and (g, h, i) == (0, 0, 0) and b + c == e):
+        if not (a == 1 and b == 46 and d == 2 and (g, h, i) == (0, 0, 0)
+                and b + c == e):
             return ValueError("Header data is abnormal, did the format gain extra fields?")
 
         f.seek(b)
@@ -298,9 +303,9 @@ def read_ast(f):
         try:
             data = extractor(f, 1)
         except ValueError as err:
-            diagnosis.append("strategy %s failed: %s" % (extractor.__name__, err))
+            diagnosis.append(f"strategy {extractor.__name__} failed: {err}")
         else:
-            diagnosis.append("strategy %s success" % extractor.__name__)
+            diagnosis.append(f"strategy {extractor.__name__} success")
             raw_datas.add(data)
 
     if not raw_datas:
@@ -334,8 +339,7 @@ def try_decrypt_section(raw_data):
     while layers < 10:
         # can we load it yet?
         try:
-            # renpy 7.5/8 compat; we use the switch here also
-            # data, stmts = magic.safe_loads(raw_data, unrpyc.class_factory, {"_ast", "collections"})
+            # NOTE: RENPY 7.5/8 compat; we use the switch here also
             data, stmts = unrpyc.revertable_switch(raw_data)
         except Exception:
             pass
@@ -351,7 +355,7 @@ def try_decrypt_section(raw_data):
                 continue
             else:
                 raw_data = newdata
-                diagnosis.append("performed a round of %s" % decryptor.__name__)
+                diagnosis.append(f"performed a round of {decryptor.__name__}")
                 break
         else:
             break

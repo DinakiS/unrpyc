@@ -23,7 +23,8 @@ from io import StringIO
 from operator import itemgetter
 
 from .util import (
-    DecompilerBase, Dispatcher, First, WordConcatenator, reconstruct_arginfo, reconstruct_paraminfo, say_get_code, split_logical_lines, string_escape)
+    DecompilerBase, Dispatcher, First, WordConcatenator, reconstruct_arginfo,
+    reconstruct_paraminfo, say_get_code, split_logical_lines, string_escape)
 from . import magic
 magic.fake_package("renpy")
 import renpy  # pyright: ignore # noqa
@@ -36,7 +37,8 @@ from . import testcasedecompiler  # noqa
 
 from unrpyc import __title__, __version__, __url__  # noqa
 __all__ = [
-    "astdump", "codegen", "magic", "screendecompiler", "sl2decompiler", "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
+    "astdump", "codegen", "magic", "screendecompiler", "sl2decompiler",
+    "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
 
 
 # Main API
@@ -105,9 +107,11 @@ class Decompiler(DecompilerBase):
         super().rollback_state(state[0])
 
     def dump(self, ast, indent_level=0, init_offset=False, tag_outside_block=False):
-        if (isinstance(ast, (tuple, list)) and len(ast) > 1
+        if (isinstance(ast, (tuple, list))
+            and len(ast) > 1
             and isinstance(ast[-1], renpy.ast.Return)
-            and (not hasattr(ast[-1], 'expression') or ast[-1].expression is None)
+            and (not hasattr(ast[-1], 'expression')
+            or ast[-1].expression is None)
                 and ast[-1].linenumber == ast[-2].linenumber):
             # A very crude version check, but currently the best we can do.
             # Note that this commit first appears in the 6.99 release.
@@ -136,7 +140,9 @@ class Decompiler(DecompilerBase):
     def print_node(self, ast):
         # We special-case line advancement for some types in their print
         # methods, so don't advance lines for them here.
-        if hasattr(ast, 'linenumber') and not isinstance(ast, (renpy.ast.TranslateString, renpy.ast.With, renpy.ast.Label, renpy.ast.Pass, renpy.ast.Return)):
+        if hasattr(ast, 'linenumber') and not isinstance(ast, (
+            renpy.ast.TranslateString, renpy.ast.With, renpy.ast.Label,
+                renpy.ast.Pass, renpy.ast.Return)):
             self.advance_to_line(ast.linenumber)
         # It doesn't matter what line "block:" is on. The loc of a RawBlock
         # refers to the first statement inside the block, which we advance
@@ -146,7 +152,6 @@ class Decompiler(DecompilerBase):
         self.dispatch.get(type(ast), type(self).print_unknown)(self, ast)
 
     # ATL printing functions
-
     def print_atl(self, ast):
         with self.increase_indent():
             self.advance_to_line(ast.loc[1])
@@ -198,10 +203,10 @@ class Decompiler(DecompilerBase):
 
         # with
         expression_words = WordConcatenator(False)
-        # TODO There's a lot of cases where pass isn't needed, since we could
-        # reorder stuff so there's never 2 expressions in a row. (And it's never
-        # necessary for the last one, but we don't know what the last one is
-        # since it could get reordered.)
+        # TODO There's a lot of cases where pass isn't needed, since we could reorder
+        # stuff so there's never 2 expressions in a row. (And it's never necessary for
+        # the last one, but we don't know what the last one is since it could get
+        # reordered.)
         needs_pass = len(ast.expressions) > 1
         for (expression, with_expression) in ast.expressions:
             expression_words.append(expression)
@@ -216,8 +221,8 @@ class Decompiler(DecompilerBase):
             self.indent()
             self.write(to_write)
         else:
-            # A trailing comma results in an empty RawMultipurpose being
-            # generated on the same line as the last real one.
+            # A trailing comma results in an empty RawMultipurpose being generated on the
+            # same line as the last real one.
             self.write(",")
 
     @dispatch(renpy.atl.RawBlock)
@@ -286,7 +291,8 @@ class Decompiler(DecompilerBase):
         self.indent()
         self.write("repeat")
         if ast.repeats:
-            self.write(" %s" % ast.repeats)  # not sure if this is even a string
+            # not sure if this is even a string
+            self.write(" %s" % ast.repeats)
 
     @dispatch(renpy.atl.RawTime)
     def print_atl_rawtime(self, ast):
@@ -294,7 +300,6 @@ class Decompiler(DecompilerBase):
         self.write("time %s" % ast.time)
 
     # Displayable related functions
-
     def print_imspec(self, imspec):
         if imspec[1] is not None:
             begin = "expression %s" % imspec[1]
@@ -337,11 +342,14 @@ class Decompiler(DecompilerBase):
         self.require_init()
         self.indent()
 
-        # If we have an implicit init block with a non-default priority, we need to store the priority here.
+        # If we have an implicit init block with a non-default priority, we need to
+        # store the priority here.
         priority = ""
         if isinstance(self.parent, renpy.ast.Init):
             init = self.parent
-            if init.priority != self.init_offset and len(init.block) == 1 and not self.should_come_before(init, ast):
+            if (init.priority != self.init_offset
+                and len(init.block) == 1
+                    and not self.should_come_before(init, ast)):
                 priority = " %d" % (init.priority - self.init_offset)
         self.write("transform%s %s" % (priority, ast.varname))
         if ast.parameters is not None:
@@ -352,7 +360,6 @@ class Decompiler(DecompilerBase):
             self.print_atl(ast.atl)
 
     # Directing related functions
-
     @dispatch(renpy.ast.Show)
     def print_show(self, ast):
         self.indent()
@@ -417,9 +424,8 @@ class Decompiler(DecompilerBase):
 
     @dispatch(renpy.ast.With)
     def print_with(self, ast):
-        # the 'paired' attribute indicates that this with
-        # and with node afterwards are part of a postfix
-        # with statement. detect this and process it properly
+        # the 'paired' attribute indicates that this with and with node afterwards are
+        # part of a postfix with statement. detect this and process it properly
         if hasattr(ast, "paired") and ast.paired is not None:
             # Sanity check. check if there's a matching with statement two nodes further
             if not (isinstance(self.block[self.index + 2], renpy.ast.With)
@@ -441,39 +447,41 @@ class Decompiler(DecompilerBase):
             self.paired_with = False
 
     # Flow control
-
     @dispatch(renpy.ast.Label)
     def print_label(self, ast):
         # If a Call block preceded us, it printed us as "from"
-        if (self.index and isinstance(self.block[self.index - 1], renpy.ast.Call)):
+        if (self.index
+                and isinstance(self.block[self.index - 1], renpy.ast.Call)):
             return
         remaining_blocks = len(self.block) - self.index
         if remaining_blocks > 1:
             next_ast = self.block[self.index + 1]
             # See if we're the label for a menu, rather than a standalone label.
-            if (not ast.block and (not hasattr(ast, 'parameters')
-                or ast.parameters is None) and hasattr(next_ast, 'linenumber')
+            if (not ast.block
+                and (not hasattr(ast, 'parameters')
+                     or ast.parameters is None)
+                and hasattr(next_ast, 'linenumber')
                 and next_ast.linenumber == ast.linenumber
                 and (isinstance(next_ast, renpy.ast.Menu)
-                or (remaining_blocks > 2
-                    and isinstance(next_ast, renpy.ast.Say)
-                    and self.say_belongs_to_menu(next_ast, self.block[self.index + 2])))):
+                     or (remaining_blocks > 2
+                         and isinstance(next_ast, renpy.ast.Say)
+                         and self.say_belongs_to_menu(
+                             next_ast, self.block[self.index + 2])))):
                 self.label_inside_menu = ast
                 return
         self.advance_to_line(ast.linenumber)
         self.indent()
 
-        # It's possible that we're an "init label", not a regular label. There's no way to know
-        # if we are until we parse our children, so temporarily redirect all of our output until
-        # that's done, so that we can squeeze in an "init " if we are.
+        # It's possible that we're an "init label", not a regular label. There's no way
+        # to know if we are until we parse our children, so temporarily redirect all of
+        # our output until that's done, so that we can squeeze in an "init " if we are.
         out_file = self.out_file
         self.out_file = StringIO()
         missing_init = self.missing_init
         self.missing_init = False
         try:
-            self.write("label %s%s%s:" % (
-                ast.name,
-                reconstruct_paraminfo(ast.parameters) if hasattr(ast, 'parameters') else '',
+            self.write("label %s%s%s:" % (ast.name, reconstruct_paraminfo(
+                ast.parameters) if hasattr(ast, 'parameters') else "",
                 " hide" if hasattr(ast, 'hide') and ast.hide else ""))
             self.print_nodes(ast.block, 1)
         finally:
@@ -502,8 +510,8 @@ class Decompiler(DecompilerBase):
                 words.append("pass")
             words.append(reconstruct_arginfo(ast.arguments))
 
-        # We don't have to check if there's enough elements here,
-        # since a Label or a Pass is always emitted after a Call.
+        # We don't have to check if there's enough elements here, since a Label or a Pass
+        # is always emitted after a Call.
         next_block = self.block[self.index + 1]
         if isinstance(next_block, renpy.ast.Label):
             words.append("from %s" % next_block.name)
@@ -516,8 +524,8 @@ class Decompiler(DecompilerBase):
             and self.parent is None and self.index + 1 == len(self.block)
             and self.index
                 and ast.linenumber == self.block[self.index - 1].linenumber):
-            # As of Ren'Py commit 356c6e34, a return statement is added to
-            # the end of each rpyc file. Don't include this in the source.
+            # As of Ren'Py commit 356c6e34, a return statement is added to the end of
+            # each rpyc file. Don't include this in the source.
             return
 
         self.advance_to_line(ast.linenumber)
@@ -556,7 +564,8 @@ class Decompiler(DecompilerBase):
         if (self.index and isinstance(self.block[self.index - 1], renpy.ast.Call)):
             return
 
-        if (self.index > 1 and isinstance(self.block[self.index - 2], renpy.ast.Call)
+        if (self.index > 1
+                and isinstance(self.block[self.index - 2], renpy.ast.Call)
                 and isinstance(self.block[self.index - 1], renpy.ast.Label)
                 and self.block[self.index - 2].linenumber == ast.linenumber):
             return
@@ -598,7 +607,9 @@ class Decompiler(DecompilerBase):
         def do_set_init_offset(linenumber):
             # if we got to the end of the file and haven't emitted this yet,
             # don't bother, since it only applies to stuff below it.
-            if linenumber is None or linenumber - self.linenumber <= 1 or self.indent_level:
+            if (linenumber is None
+                or linenumber - self.linenumber <= 1
+                    or self.indent_level):
                 return True
             if offset != self.init_offset:
                 self.indent()
@@ -629,13 +640,15 @@ class Decompiler(DecompilerBase):
                 or (ast.priority == 0 + self.init_offset
                     and isinstance(ast.block[0], renpy.ast.UserStatement)
                     and ast.block[0].line.startswith("layeredimage "))
-                # Images had their default init priority changed in commit 679f9e31 (Ren'Py 6.99.10).
-                # We don't have any way of detecting this commit, though. The closest one we can
-                # detect is 356c6e34 (Ren'Py 6.99). For any versions in between these, we'll emit
-                # an unnecessary "init 990 " before image statements, but this doesn't affect the AST,
-                # and any other solution would result in incorrect code being generated in some cases.
-                or (ast.priority == (
-                    500 if self.is_356c6e34_or_later else 990) + self.init_offset
+                # Images had their default init priority changed in commit 679f9e31
+                # (Ren'Py 6.99.10).
+                # We don't have any way of detecting this commit, though. The closest one
+                # we can detect is 356c6e34 (Ren'Py 6.99). For any versions in between
+                # these, we'll emit an unnecessary "init 990 " before image statements,
+                # but this doesn't affect the AST, and any other solution would result in
+                # incorrect code being generated in some cases.
+                or (ast.priority == (500 if self.is_356c6e34_or_later else 990)
+                    + self.init_offset
                     and isinstance(ast.block[0], renpy.ast.Image)))
                     and not (self.should_come_before(ast, ast.block[0]))):
                 # If they fulfill this criteria we just print the contained statement
@@ -720,18 +733,23 @@ class Decompiler(DecompilerBase):
 
                 state = None
 
-                # if the condition is a unicode subclass with a "linenumber" attribute it was script.
-                # If it isn't ren'py used to insert a "True" string. This string used to be of type str
-                # but nowadays it's of time unicode, just not of type PyExpr
-                if isinstance(condition, str) and hasattr(condition, "linenumber"):
-                    if self.say_inside_menu is not None and condition.linenumber > self.linenumber + 1:
-                        # The easy case: we know the line number that the menu item is on, because the condition tells us
-                        # So we put the say statement here if there's room for it, or don't if there's not
+                # if the condition is a unicode subclass with a "linenumber" attribute
+                # it was script. If it isn't ren'py used to insert a "True" string. This
+                # string used to be of type str but nowadays it's of time unicode, just
+                # not of type PyExpr
+                if (isinstance(condition, str)
+                        and hasattr(condition, "linenumber")):
+                    if (self.say_inside_menu is not None
+                            and condition.linenumber > self.linenumber + 1):
+                        # The easy case: we know the line number that the menu item is
+                        # on, because the condition tells us. So we put the say statement
+                        # here if there's room for it, or don't if there's not
                         self.print_say_inside_menu()
                     self.advance_to_line(condition.linenumber)
                 elif self.say_inside_menu is not None:
-                    # The hard case: we don't know the line number that the menu item is on
-                    # So try to put it in, but be prepared to back it out if that puts us behind on the line number
+                    # The hard case: we don't know the line number that the menu item is
+                    # on So try to put it in, but be prepared to back it out if that puts
+                    # us behind on the line number
                     state = self.save_state()
                     self.most_lines_behind = self.last_lines_behind
                     self.print_say_inside_menu()
@@ -739,9 +757,11 @@ class Decompiler(DecompilerBase):
                 self.print_menu_item(label, condition, block, arguments)
 
                 if state is not None:
-                    if self.most_lines_behind > state[7]:  # state[7] is the saved value of self.last_lines_behind
-                        # We tried to print the say statement that's inside the menu, but it didn't fit here
-                        # Undo it and print this item again without it. We'll fit it in later
+                    if self.most_lines_behind > state[7]:
+                        # state[7] is the saved value of self.last_lines_behind.
+                        # We tried to print the say statement that's inside the menu, but
+                        # it didn't fit here. Undo it and print this item again without
+                        # it. We'll fit it in later
                         self.rollback_state(state)
                         self.print_menu_item(label, condition, block, arguments)
                     else:
@@ -750,11 +770,11 @@ class Decompiler(DecompilerBase):
                         self.commit_state(state)
 
             if self.say_inside_menu is not None:
-                # There was no room for this before any of the menu options, so it will just have to go after them all
+                # There was no room for this before any of the menu options, so it will
+                # just have to go after them all
                 self.print_say_inside_menu()
 
     # Programming related functions
-
     @dispatch(renpy.ast.Python)
     def print_python(self, ast, early=False):
         self.indent()
@@ -793,22 +813,26 @@ class Decompiler(DecompilerBase):
         else:
             name = "define"
 
-        # If we have an implicit init block with a non-default priority, we need to store the priority here.
+        # If we have an implicit init block with a non-default priority, we need to store
+        # the priority here.
         priority = ""
         if isinstance(self.parent, renpy.ast.Init):
             init = self.parent
-            if init.priority != self.init_offset and len(init.block) == 1 and not self.should_come_before(init, ast):
+            if (init.priority != self.init_offset
+                and len(init.block) == 1
+                    and not self.should_come_before(init, ast)):
                 priority = " %d" % (init.priority - self.init_offset)
         index = ""
         if hasattr(ast, "index") and ast.index is not None:
             index = "[%s]" % ast.index.source
         if not hasattr(ast, "store") or ast.store == "store":
-            self.write("%s%s %s%s = %s" % (name, priority, ast.varname, index, ast.code.source))
+            self.write("%s%s %s%s = %s" % (
+                name, priority, ast.varname, index, ast.code.source))
         else:
-            self.write("%s%s %s.%s%s = %s" % (name, priority, ast.store[6:], ast.varname, index, ast.code.source))
+            self.write("%s%s %s.%s%s = %s" % (
+                name, priority, ast.store[6:], ast.varname, index, ast.code.source))
 
     # Specials
-
     # Returns whether a Say statement immediately preceding a Menu statement
     # actually belongs inside of the Menu statement.
     def say_belongs_to_menu(self, say, menu):
@@ -821,7 +845,8 @@ class Decompiler(DecompilerBase):
 
     @dispatch(renpy.ast.Say)
     def print_say(self, ast, inmenu=False):
-        if (not inmenu and self.index + 1 < len(self.block)
+        if (not inmenu
+            and self.index + 1 < len(self.block)
                 and self.say_belongs_to_menu(ast, self.block[self.index + 1])):
             self.say_inside_menu = ast
             return
@@ -837,7 +862,7 @@ class Decompiler(DecompilerBase):
             with self.increase_indent():
                 self.print_lex(ast.block)
 
-    # Postuserstatement added in v7.3 and was missing; taken from user@VepsrP
+    # NOTE: Postuserstatement added in v7.3 and was missing; taken from user@VepsrP
     @dispatch(renpy.ast.PostUserStatement)
     def print_postuserstatement(self, ast):
         pass
@@ -891,7 +916,6 @@ class Decompiler(DecompilerBase):
                     self.write(i[1])
 
     # Translation functions
-
     @dispatch(renpy.ast.Translate)
     def print_translate(self, ast):
         self.indent()
@@ -934,8 +958,10 @@ class Decompiler(DecompilerBase):
         self.skip_indent_until_write = True
 
         in_init = self.in_init
-        if len(ast.block) == 1 and isinstance(ast.block[0], (renpy.ast.Python, renpy.ast.Style)):
-            # Ren'Py counts the TranslateBlock from "translate python" and "translate style" as an Init.
+        if (len(ast.block) == 1
+                and isinstance(ast.block[0], (renpy.ast.Python, renpy.ast.Style))):
+            # Ren'Py counts the TranslateBlock from "translate python" and "translate
+            # style" as an Init.
             self.in_init = True
         try:
             self.print_nodes(ast.block)
@@ -943,14 +969,14 @@ class Decompiler(DecompilerBase):
             self.in_init = in_init
 
     # Screens
-
     @dispatch(renpy.ast.Screen)
     def print_screen(self, ast):
         self.require_init()
         screen = ast.screen
         if isinstance(screen, renpy.screenlang.ScreenLangScreen):
             self.linenumber = screendecompiler.pprint(
-                self.out_file, screen, self.indent_level, self.linenumber, self.decompile_python, self.skip_indent_until_write, self.printlock)
+                self.out_file, screen, self.indent_level, self.linenumber,
+                self.decompile_python, self.skip_indent_until_write, self.printlock)
             self.skip_indent_until_write = False
 
         elif isinstance(screen, renpy.sl2.slast.SLScreen):
@@ -971,13 +997,14 @@ class Decompiler(DecompilerBase):
                 return new_linenumber
 
             self.linenumber = sl2decompiler.pprint(
-                self.out_file, screen, print_atl_callback, self.indent_level, self.linenumber, self.skip_indent_until_write, self.printlock, self.tag_outside_block)
+                self.out_file, screen, print_atl_callback, self.indent_level,
+                self.linenumber, self.skip_indent_until_write, self.printlock,
+                self.tag_outside_block)
             self.skip_indent_until_write = False
         else:
             self.print_unknown(screen)
 
     # Testcases
-
     @dispatch(renpy.ast.Testcase)
     def print_testcase(self, ast):
         self.require_init()

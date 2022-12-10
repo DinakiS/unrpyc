@@ -39,7 +39,7 @@ class AstDumper:
     it will create a human-readable representation of all interesting
     attributes and write this to a given stream
     """
-    # renpy 7.5/8 combat; renpy removed frozenset
+    # NOTE: RENPY 7.5/8 combat; renpy removed frozenset
     MAP_OPEN = {list: '[', tuple: '(', set: '{'}
     MAP_CLOSE = {list: ']', tuple: ')', set: '}'}
 
@@ -70,7 +70,7 @@ class AstDumper:
             return
         self.passed.append(ast)
         self.passed_where.append(self.linenumber)
-        # renpy 7.5/8 combat; renpy removed frozenset
+        # NOTE: RENPY 7.5/8 combat; renpy removed frozenset
         if isinstance(ast, (list, tuple, set)):
             self.print_list(ast)
         elif isinstance(ast, renpy.ast.PyExpr):
@@ -92,10 +92,12 @@ class AstDumper:
 
     def print_list(self, ast):
         # handles the printing of simple containers of N elements.
-        # renpy 7.5/8 combat; renpy removed frozenset
-        if type(ast) not in (list, tuple, set):
+        # NOTE: RENPY 7.5/8 combat; renpy removed frozenset
+        # if type(ast) not in (list, tuple, set):
+        if not isinstance(ast, (list, tuple, set)):
             self.p(repr(type(ast)))
-
+            # FIXME: Will below ever be true? Does the type check above not filter them
+            # out?
             for k in (list, tuple, set):
                 if isinstance(ast, k):
                     klass = k

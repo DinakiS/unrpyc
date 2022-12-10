@@ -57,6 +57,7 @@ import _unrpyc_ver
 
 __title__ = "unrpyc"
 __version__ = _unrpyc_ver.__version__
+__url__ = "https://github.com/CensoredUsername/unrpyc"
 
 
 # special definitions for special classes
@@ -87,7 +88,7 @@ class PyCode(magic.FakeStrict):
         self.bytecode = None
 
 
-# renpy 7.5/8 compat; change renpy.python to renpy.revertable 3times
+# NOTE: RENPY 7.5/8 compat; change renpy.python to renpy.revertable 3times
 class RevertableList(magic.FakeStrict, list):
     __module__ = "renpy.revertable"
 
@@ -124,16 +125,19 @@ class Sentinel(magic.FakeStrict):
         return obj
 
 
-# renpy 7.5/8 compat
+# NOTE: RENPY 7.5/8 compat
 # - renpy removed frozenset
-# - Let's create two instances of class_factory instead of redefining them on every error # due to revertable objects. renpy @7.5(also v8) is normaly used and @7.4 is fallback
-cls_factory_75 = magic.FakeClassFactory(
-    (set, PyExpr, PyCode, RevertableList, RevertableDict, RevertableSet, Sentinel), magic.FakeStrict)
+# - Creates two instances of class_factory instead of redefining them on every error due
+#   to revertable objects. renpy @8(also v7.5) is normaly used and @7.4 is fallback
+cls_factory_8 = magic.FakeClassFactory(
+    (set, PyExpr, PyCode, RevertableList, RevertableDict, RevertableSet, Sentinel),
+    magic.FakeStrict)
 
 RevertableList.__module__, RevertableDict.__module__, RevertableSet.__module__ = (
     "renpy.python", ) * 3
 cls_factory_74 = magic.FakeClassFactory(
-    (set, PyExpr, PyCode, RevertableList, RevertableDict, RevertableSet, Sentinel), magic.FakeStrict)
+    (set, PyExpr, PyCode, RevertableList, RevertableDict, RevertableSet, Sentinel),
+    magic.FakeStrict)
 
 printlock = Lock()
 
@@ -143,9 +147,12 @@ import deobfuscate  # nopep8 # noqa
 
 # API
 def revertable_switch(raw_dat):
-    """Switches in a way between two instances of cls_factory. If a error from possible old code appears, it uses renpy.python instead of the new renpy.revertable module name."""
+    """
+    Switches in a way between two instances of cls_factory. If a error from possible old
+    code appears, it uses renpy.python instead of the new renpy.revertable module name.
+    """
     try:
-        _, stmts = magic.safe_loads(raw_dat, cls_factory_75, {
+        _, stmts = magic.safe_loads(raw_dat, cls_factory_8, {
             "_ast", "collections"})
     except TypeError as err:
         if 'Revertable' in err.args[0]:
@@ -155,14 +162,16 @@ def revertable_switch(raw_dat):
 
 
 def read_ast_from_file(in_file):
-    # .rpyc files are just zlib compressed pickles of a tuple of some data and the actual AST of the file
+    # .rpyc files are just zlib compressed pickles of a tuple of some data and the actual
+    # AST of the file
     raw_contents = in_file.read()
     if raw_contents.startswith(b"RENPY RPC2"):
         # parse the archive structure
         position = 10
         chunks = {}
         while True:
-            slot, start, length = struct.unpack("III", raw_contents[position: position + 12])
+            slot, start, length = struct.unpack(
+                "III", raw_contents[position: position + 12])
             if slot == 0:
                 break
             position += 12
@@ -171,18 +180,18 @@ def read_ast_from_file(in_file):
 
         raw_contents = chunks[1]
 
-    # py3 compat: zlib should be enough, no need for codecs
-    # raw_contents = raw_contents.decode('zlib')
+    # NOTE: PY3 compat: zlib should be enough, no need to import codecs
     raw_contents = zlib.decompress(raw_contents)
-    # renpy 7.5/8 compat; for revertable problem
-    # data, stmts = magic.safe_loads(raw_contents, class_factory, {"_ast", "collections"})
-    data, stmts = revertable_switch(raw_contents)
+    # NOTE: RENPY 7.5/8 compat; for revertable problem
+    stmts = revertable_switch(raw_contents)
     return stmts
 
 
-def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python=False,
-                   comparable=False, no_pyexpr=False, translator=None, tag_outside_block=False,
-                   init_offset=False, try_harder=False):
+def decompile_rpyc(
+        input_filename, overwrite=False, dump=False, decompile_python=False,
+        comparable=False, no_pyexpr=False, translator=None, tag_outside_block=False,
+        init_offset=False, try_harder=False):
+
     # Output filename is input filename but with .rpy extension
     # if dump:
     #     out_filename = input_filename.with_suffix('.txt')
@@ -200,9 +209,11 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
     out_filename = input_filename.with_suffix(ext)
 
     with printlock:
-        print(("Decompiling %s to %s..." % (input_filename, out_filename)))
+        print(f"Decompiling {input_filename} to {out_filename}...")
 
         if not overwrite and out_filename.exists:
+            print("Output file already exists and is skipped. Pass --clobber"
+                  " to overwrite.")
             return False  # Don't stop decompiling if one file already exists
 
     with input_filename.open('rb') as in_file:
@@ -214,18 +225,20 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
     # NOTE: PY3 compat: 'codecs' is not unnecessary
     with out_filename.open('w', encoding='utf-8') as out_file:
         if dump:
-            astdump.pprint(out_file, ast, decompile_python=decompile_python,
-                           comparable=comparable, no_pyexpr=no_pyexpr)
+            astdump.pprint(
+                out_file, ast, decompile_python=decompile_python,
+                comparable=comparable, no_pyexpr=no_pyexpr)
         else:
-            decompiler.pprint(out_file, ast, decompile_python=decompile_python,
-                              printlock=printlock, translator=translator, tag_outside_block=tag_outside_block,
-                              init_offset=init_offset)
+            decompiler.pprint(
+                out_file, ast, decompile_python=decompile_python,
+                printlock=printlock, translator=translator,
+                tag_outside_block=tag_outside_block, init_offset=init_offset)
     return True
 
 
 def extract_translations(input_filename, language):
     with printlock:
-        print("Extracting translations from %s..." % input_filename)
+        print(f"Extracting translations from {input_filename}...")
 
     with input_filename.open('rb') as in_file:
         ast = read_ast_from_file(in_file)
@@ -240,18 +253,22 @@ def worker(args, filename):
     try:
         if args.write_translation_file:
             return extract_translations(filename, args.language)
-        else:
-            if args.translation_file is not None:
-                translator = translate.Translator(None)
-                translator.language, translator.dialogue, translator.strings = (
-                    magic.loads(args.translations, cls_factory_75))
-            else:
-                translator = None
-            return decompile_rpyc(filename, args.clobber, args.dump,
-                                  decompile_python=args.decompile_python, no_pyexpr=args.no_pyexpr, comparable=args.comparable, translator=translator, tag_outside_block=args.tag_outside_block, init_offset=args.init_offset, try_harder=args.try_harder)
+
+        translator = None
+        if args.translation_file is not None:
+            translator = translate.Translator(None)
+            translator.language, translator.dialogue, translator.strings = (
+                magic.loads(args.translations, cls_factory_8))
+
+        return decompile_rpyc(
+            filename, args.clobber, args.dump,
+            decompile_python=args.decompile_python, no_pyexpr=args.no_pyexpr,
+            comparable=args.comparable, translator=translator,
+            tag_outside_block=args.tag_outside_block, init_offset=args.init_offset,
+            try_harder=args.try_harder)
     except Exception:
         with printlock:
-            print("Error while decompiling %s:" % filename)
+            print(f"Error while decompiling {filename}:")
             print(traceback.format_exc())
         return False
 
@@ -399,7 +416,7 @@ def main(args):
     # results = list(map(partial(worker, args), files))
 
     if args.write_translation_file:
-        print("Writing translations to %s..." % args.write_translation_file)
+        print(f"Writing translations to {args.write_translation_file}...")
         translated_dialogue = {}
         translated_strings = {}
         good = 0
@@ -409,7 +426,7 @@ def main(args):
                 bad += 1
                 continue
             good += 1
-            translated_dialogue.update(magic.loads(result[0], cls_factory_75))
+            translated_dialogue.update(magic.loads(result[0], cls_factory_8))
             translated_strings.update(result[1])
         with args.write_translation_file.open('wb') as out_file:
             magic.safe_dump((
@@ -420,14 +437,15 @@ def main(args):
         good = results.count(True)
         bad = results.count(False)
 
+    def numeri(inp):
+        return 's' if inp > 1 else ''
     if bad == 0:
-        print("Decompilation of %d script file%s successful" %
-              (good, 's' if good > 1 else ''))
+        print(f"Decompilation of {good} script file{numeri(good)} successful.")
     elif good == 0:
-        print("Decompilation of %d file%s failed" %
-              (bad, 's' if bad > 1 else ''))
+        print(f"Decompilation of {bad} file{numeri(bad)} failed.")
     else:
-        print("Decompilation of %d file%s successful, but decompilation of %d file%s failed" % (good, 's' if good > 1 else '', bad, 's' if bad > 1 else ''))
+        print(f"Decompilation of {good} file{numeri(good)} successful,"
+              f" but decompilation of {bad} file{numeri(bad)} failed.")
 
 
 if __name__ == '__main__':
