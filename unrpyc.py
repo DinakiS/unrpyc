@@ -253,13 +253,9 @@ def sharelock(lock):
     printlock = lock
 
 
-def check_inpath(inp):
+def check_inpath(inp, strict=True):
     """Helper to check if given path exist."""
-    inp = pt(inp)
-    if not inp.exists() or inp.is_symlink():
-        raise FileNotFoundError(f"Could the given path object ({inp})"
-                                "not find! Check the given input.")
-    return inp.resolve(strict=True)
+    return pt(inp).resolve(strict)
 
 
 def _parse_args():
@@ -286,11 +282,13 @@ def _parse_args():
     aps.add_argument('-t', '--translation-file',
                      dest='translation_file',
                      action='store',
+                     type=check_inpath,
                      default=None,
                      help="use the specified file to translate during decompilation")
     aps.add_argument('-T', '--write-translation-file',
                      dest='write_translation_file',
                      action='store',
+                     type=pt,
                      default=None,
                      help="store translations in the specified file instead of decompiling")
     aps.add_argument('-l', '--language',
@@ -327,7 +325,7 @@ def _parse_args():
                      "This is always safe to enable if the game's Ren'Py version supports init offset statements, "
                      "and the generated code is exactly equivalent, only less cluttered.")
     aps.add_argument('file',
-                     type=str,
+                     type=check_inpath,
                      nargs='+',
                      help="The filenames to decompile. "
                      "All .rpyc files in any directories passed or their subdirectories will also be decompiled.")
@@ -358,7 +356,7 @@ def main(args):
             args.translations = in_file.read()
     # NOTE: v1.2.0 refactoring: Code till Pool reworked to pathlib usage
     # Check target path(s)
-    filesAndDirs = list(map(check_inpath, args.file))
+    # filesAndDirs = [check_inpath(x) for x in args.file]
 
     files = []
     for item in filesAndDirs:
