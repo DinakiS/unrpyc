@@ -184,12 +184,20 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
                    comparable=False, no_pyexpr=False, translator=None, tag_outside_block=False,
                    init_offset=False, try_harder=False):
     # Output filename is input filename but with .rpy extension
-    if dump:
-        out_filename = input_filename.with_suffix('.txt')
-    elif input_filename.suffix == ('.rpyc'):
-        out_filename = input_filename.with_suffix('.rpy')
+    # if dump:
+    #     out_filename = input_filename.with_suffix('.txt')
+    # elif input_filename.suffix == ('.rpyc'):
+    #     out_filename = input_filename.with_suffix('.rpy')
+    # elif input_filename.suffix == ('.rpymc'):
+    #     out_filename = input_filename.with_suffix('.rpym')
+
+    if input_filename.suffix == ('.rpyc'):
+        ext = '.rpy'
     elif input_filename.suffix == ('.rpymc'):
-        out_filename = input_filename.with_suffix('.rpym')
+        ext = '.rpym'
+    elif dump:
+        ext = '.txt'
+    out_filename = input_filename.with_suffix(ext)
 
     with printlock:
         print(("Decompiling %s to %s..." % (input_filename, out_filename)))
@@ -342,31 +350,36 @@ def _parse_args():
 
 def main(args):
     """Main execution..."""
+    # NOTE: v1.2.0 refactoring: Code reworked to pathlib usage
     if not sys.version_info[:2] >= (3, 6):
         raise Exception("Must be executed in Python 3.6 or later.\n"
                         "You are running {}".format(sys.version))
 
-    if args.write_translation_file and not args.clobber and pt(args.write_translation_file).exists():
+    if (args.write_translation_file
+        and not args.clobber
+            and args.write_translation_file.exists()):
         # Fail early to avoid wasting time going through the files
         print("Output translation file already exists. Pass --clobber to overwrite.")
         return
 
     if args.translation_file:
-        with open(args.translation_file, 'rb') as in_file:
+        with args.translation_file.open('rb') as in_file:
             args.translations = in_file.read()
-    # NOTE: v1.2.0 refactoring: Code till Pool reworked to pathlib usage
+
     # Check target path(s)
     # filesAndDirs = [check_inpath(x) for x in args.file]
 
-    files = []
-    for item in filesAndDirs:
+    def rpyc_check(inp):
+        return bool(inp.suffix in ('.rpyc', '.rpymc') and inp.is_file())
+
+    files = list()
+    for item in args.file:
         if item.is_dir():
             for entry in item.rglob('*'):
-                if entry.suffix in ('.rpyc', '.rpymc') and entry.is_file():
+                if rpyc_check(entry):
                     files.append(entry)
-        else:
-            if item.suffix in ('.rpyc', '.rpymc'):
-                files.append(item)
+        elif rpyc_check(item):
+            files.append(item)
 
     # Check if we actually have files. Don't worry about no parameters passed,
     # since ArgumentParser catches that
@@ -398,8 +411,9 @@ def main(args):
             good += 1
             translated_dialogue.update(magic.loads(result[0], cls_factory_75))
             translated_strings.update(result[1])
-        with open(args.write_translation_file, 'wb') as out_file:
-            magic.safe_dump((args.language, translated_dialogue, translated_strings), out_file)
+        with args.write_translation_file.open('wb') as out_file:
+            magic.safe_dump((
+                args.language, translated_dialogue, translated_strings), out_file)
 
     else:
         # Check per file if everything went well and report back
