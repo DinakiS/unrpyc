@@ -211,7 +211,7 @@ def decompile_rpyc(
     with printlock:
         print(f"Decompiling {input_filename} to {out_filename}...")
 
-        if not overwrite and out_filename.exists:
+        if not overwrite and out_filename.exists():
             print("Output file already exists and is skipped. Pass --clobber"
                   " to overwrite.")
             return False  # Don't stop decompiling if one file already exists
