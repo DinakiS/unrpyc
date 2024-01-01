@@ -35,7 +35,6 @@ from . import screendecompiler  # noqa
 from . import sl2decompiler  # noqa
 from . import testcasedecompiler  # noqa
 
-from ..unrpyc import __title__, __version__, __url__  # noqa
 __all__ = [
     "astdump", "codegen", "magic", "screendecompiler", "sl2decompiler",
     "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
