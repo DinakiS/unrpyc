@@ -29,31 +29,27 @@ import struct
 import traceback
 import zlib
 
+# Mock required support when multiprocessing is unavailable
+def cpu_count():
+    return 1
 
-try:
-    from multiprocessing import Lock, Pool, cpu_count
-except ImportError:
-    # Mock required support when multiprocessing is unavailable
-    def cpu_count():
-        return 1
+class Lock:
+    def __enter__(self):
+        pass
 
-    class Lock:
-        def __enter__(self):
-            pass
+    def __exit__(self, type, value, traceback):
+        pass
 
-        def __exit__(self, type, value, traceback):
-            pass
+    def acquire(self, block=True, timeout=None):
+        pass
 
-        def acquire(self, block=True, timeout=None):
-            pass
-
-        def release(self):
-            pass
+    def release(self):
+        pass
 
 
-import decompiler
-from decompiler import astdump, magic, translate
-import _unrpyc_ver
+from . import decompiler
+from .decompiler import astdump, magic, translate
+from . import _unrpyc_ver
 
 __title__ = "unrpyc"
 __version__ = _unrpyc_ver.__version__
@@ -142,7 +138,7 @@ cls_factory_74 = magic.FakeClassFactory(
 printlock = Lock()
 
 # needs class_factory
-import deobfuscate  # nopep8 # noqa
+from . import deobfuscate  # nopep8 # noqa
 
 
 # API

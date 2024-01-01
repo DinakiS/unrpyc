@@ -35,7 +35,7 @@ from . import screendecompiler  # noqa
 from . import sl2decompiler  # noqa
 from . import testcasedecompiler  # noqa
 
-from unrpyc import __title__, __version__, __url__  # noqa
+from ..unrpyc import __title__, __version__, __url__  # noqa
 __all__ = [
     "astdump", "codegen", "magic", "screendecompiler", "sl2decompiler",
     "testcasedecompiler", "translate", "util", "pprint", "Decompiler"]
@@ -133,7 +133,7 @@ class Decompiler(DecompilerBase):
             m(None)
         # self.write(f"\n  # Decompiled by unrpyc_v{__version__}: "
         #            "https://github.com/CensoredUsername/unrpyc\n")
-        self.write(f"\n\n  # Decompiled by {__title__}_v{__version__}: {__url__}\n")
+        self.write(f"\n\n  # Decompiled by unrpyc_v1.2.0-alpha: https://github.com/CensoredUsername/unrpyc\n")
         assert not self.missing_init, (
             "A required init, init label, or translate block was missing")
 
